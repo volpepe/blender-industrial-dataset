@@ -5,6 +5,10 @@ import os
 from datetime import datetime
 import sys
 
+render_config = {
+    "fps": 12
+}
+
 #objects present in the scene
 objects = {
     'cubes' : {
@@ -44,48 +48,48 @@ objects = {
 }
 
 object_locations = {
-    'ground' : {
-        'cube_2' : bpy.data.objects["Cube.002"],
-        'cube_4' : bpy.data.objects["Cube.004"],
-        'cube_7' : bpy.data.objects["Cube.007"],
-        'cone_1' : bpy.data.objects["Cone.001"],
-        'cylinder_1' : bpy.data.objects["Cylinder.001"],
-    },
-    'loc_0': {
+    'ground' : [
+        bpy.data.objects["Cube.002"],
+        bpy.data.objects["Cube.004"],
+        bpy.data.objects["Cube.007"],
+        bpy.data.objects["Cone.001"],
+        bpy.data.objects["Cylinder.001"],
+    ],
+    'loc_0': [
         bpy.data.objects["Sphere"],
-    },
-    'loc_1': {},
-    'loc_2': {
+    ],
+    'loc_1': [],
+    'loc_2': [
         bpy.data.objects["Sphere.001"],
-    },
-    'loc_3': {
+    ],
+    'loc_3': [
         bpy.data.objects["Cube"],
-    },
-    'loc_4': {
+    ],
+    'loc_4': [
         bpy.data.objects["Cylinder"],
         bpy.data.objects["Cube.001"],
         bpy.data.objects["Sphere.002"],
-    },
-    'loc_5': {
+    ],
+    'loc_5': [
         bpy.data.objects["Sphere.004"],
-    },
-    'loc_6': {},
-    'loc_7': {},
-    'loc_8': {
+    ],
+    'loc_6': [],
+    'loc_7': [],
+    'loc_8': [
         bpy.data.objects["Sphere.003"],
-    },
-    'loc_9': {
+    ],
+    'loc_9': [
         bpy.data.objects["Cone"],
-    },
-    'loc_10': {},
-    'loc_11': {
+    ],
+    'loc_10': [],
+    'loc_11': [
         bpy.data.objects["Cube.006"],
-    },
-    'loc_12': {
+    ],
+    'loc_12': [
         bpy.data.objects["Cube.003"],
         bpy.data.objects["Cube.005"],
-    },
-    'loc_13': {},
+    ],
+    'loc_13': [],
 }
 
 #doors of the locker: they can be opened by rotating their z axis at -90°
@@ -107,6 +111,9 @@ doors = {
     'door_13' : bpy.data.objects["Door_13"],
 }
 
+#False = closed, True = open
+door_open = [False] * len(doors.keys())
+
 brightness_levels = [x for x in range(2000, 60000, 1000)]
 
 
@@ -114,46 +121,142 @@ brightness_levels = [x for x in range(2000, 60000, 1000)]
 
 #random choices
 
+#choose a random luminosity and print it to console
 def choose_luminosity(min=2000, max=60000):
     chosen_luminosity = choice([x for x in brightness_levels if x >= min and x <= max])
     print("Chosen luminosity: " + str(chosen_luminosity))
     return chosen_luminosity
 
+#choose a random activity from the ones in the activity dictionary
 def choose_activity():
     random_activity = choice(list(activities.keys()))
     print("Chosen activity: " + random_activity)
     return random_activity
 
+#selects a random object from a list of choices passed as an argument
+#a location can be selected as well
+#example: ["cubes", "spheres"] --> select a random cube or sphere
+#["cubes"] --> selects a random cube
+def select_random_object(choices=["cubes", "spheres"], location=None):
+    list_obj = []
+    for c in choices:
+        list_obj.extend(objects[c].values())
+    if location is not None:
+        list_obj = [x for x in list_obj if x in object_locations[location]]
+    return choice(list_obj)
+
 ###################################################################
 
-#sets a random luminosity to a light
-def set_random_luminosity(light, min=200, max=8200):
-    light.energy = choose_luminosity()
+#rendering utilities
+
+#changes current frame
+def set_current_frame(frame_num):
+    bpy.context.scene.frame_set(frame_num)
+
+#adds a keyframe at the current frame for a list of objects
+def set_keyframe_for_objects(scene_objects, data_path="location"):
+    for scene_object in scene_objects:
+        scene_object.keyframe_insert(data_path=data_path, index=-1)
 
 #last function to call: renders the scene with the set keyframes and settings
 def render_and_end():
     bpy.ops.render.render(animation=True)
 
+###################################################################
+
+#environment utilities
+
+#gets all object except the ones defined in the exception list
 def get_all_objects(exceptions=[]):
     return [obj for key in objects.keys() for obj in objects[key].values() if key not in exceptions]
 
+#sets a random luminosity to a light
+def set_random_luminosity(light, min=200, max=8200):
+    light.energy = choose_luminosity()
+
+def enable_collisions(objs):
+    for obj in objs:
+        obj.rigid_body.enabled = True
+        obj.rigid_body.kinematic = False
+
+#returns a string that indicates where the object is
+def get_locker_num_for_object(obj):
+    for locker in object_locations.keys():
+        if obj in object_locations[locker]:
+            return locker
+    return None
+
+#gets the location of the locker's handle
+def get_handle_location_for_object(obj):
+    locker = get_locker_num_for_object(obj)
+    if locker is not None and locker != 'ground':
+        locker_num = locker.split('_')[1]
+        door = doors['door_' + locker_num]
+        door_location = door.location
+        if not door_open[int(locker_num)]:
+            door_location[1] += door.dimensions[1]
+        else:
+            door_location[0] += door.dimensions[1]
+        return door_location
+    else:
+        return None
 
 ###################################################################
 
-def test():
-    print("test!")
-    print("loaded objects: " + str(objects))
-    print("loaded locations: " + str(object_locations))
-    print("loaded doors: " + str(doors))
+def move_sphere_to_empty():
+    #select a random sphere
+    sphere = select_random_object(choices=["spheres"])
+    print("Selected " + str(sphere))
 
-def test_2():
-    print("test 2: I dunno man")
+    #enable all collisions
+    enable_collisions(get_all_objects(exceptions=["lights", "cameras"]))
+
+    #get reference to the arm
+    arm = objects["robots"]["arm_0"]
+    starting_location = [x for x in arm.location]
+
+    #let the arm be controlled by the animation
+    arm.rigid_body.kinematic = True
+    #temporarily disable rigid_body physics for the sphere
+    sphere.rigid_body.kinematic = True
+
+    #set the first keyframe for the arm and the sphere
+    current_frame = 0
+    set_current_frame(current_frame)
+    set_keyframe_for_objects([arm, sphere])
+
+    #approach its locker (1 sec)
+
+    #get the locker location
+    handle_0 = get_handle_location_for_object(sphere)
+    if handle_0 is None:
+        return None #nothing happens
+
+    #move arm to locker
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location = handle_0
+    set_keyframe_for_objects([arm])
+    
+    #open the locker (2 secs)
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+
+    #select a random locker
+    #approach the second locker (1 sec)
+    #open the second locker (1 sec)
+    #get back to first locker (2 secs)
+    #get item (1 sec)
+    #get out with item (1 sec)
+    #take the item to second locker (2 secs)
+    #put it in(1 sec)
+    #get out (1 sec)
+    #move to second locker and close it (3 sec)
 
 ###################################################################
 
 activities = {
-    'test_1' : test,
-    'test_2' : test_2,
+    'move_sphere_to_empty' : move_sphere_to_empty,
 }
 
 #get the path for saving the files
