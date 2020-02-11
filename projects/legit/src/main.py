@@ -147,11 +147,14 @@ def select_random_object(choices=["cubes", "spheres", "cylinders", "cones"], loc
         list_obj = [x for x in list_obj if x in object_locations[location]]
     return choice(list_obj)
 
-def get_random_nonempty_locker_num_and_door(exceptions=[]):
+def get_random_locker_num_and_door(exceptions=[], nonempty=False):
     while True: 
         i = randint(0, len(doors.keys()) - 1)
-        if i not in exceptions and len(object_locations['loc_' + str(i)]) > 0:
-            break
+        if i not in exceptions:
+            if not nonempty
+                break
+            else if len(object_locations['loc_' + str(i)]) > 0:
+                break
     return i, doors["door_" + str(i)]
 
 def random_scaled(max, min):
@@ -224,7 +227,7 @@ def get_handle_location_for_object(obj):
 
 ###################################################################
 
-def move_sphere_to_empty():
+def move_sphere_to_locker():
     #select a random sphere
     sphere = select_random_object(choices=["spheres"])
     print("Selected " + str(sphere))
@@ -273,7 +276,7 @@ def move_sphere_to_empty():
     set_keyframe_for_objects([door], data_path="rotation_euler")
 
     #select a random object in another locker
-    locker_num_2, door_2 = get_random_nonempty_locker_num_and_door(exceptions=[locker_num])
+    locker_num_2, door_2 = get_random_locker_num_and_door(exceptions=[locker_num], nonempty=False)
     object_2 = select_random_object(location="loc_" + str(locker_num_2))
 
     #approach the second locker (1 sec)
@@ -288,9 +291,9 @@ def move_sphere_to_empty():
     set_current_frame(current_frame)
     door_2.rotation_euler[2] = radians(-90)
     door_open[int(locker_num_2)] = True
-    arm.location = get_handle_location_for_object(sphere)
+    arm.location = get_handle_location_for_object(object_2)
     set_keyframe_for_objects([arm])
-    set_keyframe_for_objects([door], data_path="rotation_euler")
+    set_keyframe_for_objects([door_2], data_path="rotation_euler")
 
     #get in front of the object of the first locker (1 sec)
     #move in y and z
@@ -349,7 +352,7 @@ def move_sphere_to_empty():
 ###################################################################
 
 activities = {
-    'move_sphere_to_empty' : move_sphere_to_empty,
+    'move_sphere_to_locker' : move_sphere_to_locker,
 }
 
 #get the path for saving the files
