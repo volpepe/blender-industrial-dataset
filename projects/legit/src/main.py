@@ -151,9 +151,10 @@ def get_random_locker_num_and_door(exceptions=[], nonempty=False):
     while True: 
         i = randint(0, len(doors.keys()) - 1)
         if i not in exceptions:
-            if not nonempty
+            if not nonempty:
+                print("Chosen door " + str(i))
                 break
-            else if len(object_locations['loc_' + str(i)]) > 0:
+            elif len(object_locations['loc_' + str(i)]) > 0:
                 break
     return i, doors["door_" + str(i)]
 
@@ -215,15 +216,18 @@ def get_handle_location_for_object(obj):
     if locker is not None and locker != 'ground':
         locker_num = locker.split('_')[1]
         door = doors['door_' + locker_num]
-        #we need to copy the location in a new vector or the following changes would be made on the door location
-        door_location = Vector(door.location)
-        if not door_open[int(locker_num)]:
-            door_location[1] += door.dimensions[1]
-        else:
-            door_location[0] += door.dimensions[1]
-        return door_location
+        return get_handle_location_for_door(door, locker_num)
     else:
         return None
+
+def get_handle_location_for_door(door, locker_num):
+    #we need to copy the location in a new vector or the following changes would be made on the door location
+    door_location = Vector(door.location)
+    if not door_open[int(locker_num)]:
+        door_location[1] += door.dimensions[1]
+    else:
+        door_location[0] += door.dimensions[1]
+    return door_location
 
 ###################################################################
 
@@ -277,12 +281,11 @@ def move_sphere_to_locker():
 
     #select a random object in another locker
     locker_num_2, door_2 = get_random_locker_num_and_door(exceptions=[locker_num], nonempty=False)
-    object_2 = select_random_object(location="loc_" + str(locker_num_2))
 
     #approach the second locker (1 sec)
     current_frame += render_config["fps"]
     set_current_frame(current_frame)
-    arm.location = get_handle_location_for_object(object_2)
+    arm.location = get_handle_location_for_door(door_2, locker_num_2)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door_2], data_path="rotation_euler")
 
@@ -291,7 +294,7 @@ def move_sphere_to_locker():
     set_current_frame(current_frame)
     door_2.rotation_euler[2] = radians(-90)
     door_open[int(locker_num_2)] = True
-    arm.location = get_handle_location_for_object(object_2)
+    arm.location = get_handle_location_for_door(door_2, locker_num_2)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door_2], data_path="rotation_euler")
 
@@ -324,10 +327,10 @@ def move_sphere_to_locker():
     set_current_frame(current_frame)
     #x and y are random within the locker boundaries
     positioning_x, positioning_y = get_random_x_and_y_within_locker(door_2)
-    correct_x = door.location[0] - positioning_x
-    correct_y = door.location[1] + positioning_y
+    correct_x = door_2.location[0] - positioning_x
+    correct_y = door_2.location[1] + positioning_y
     #correct z to put the object exactly at the height of the shelf of the locker
-    correct_z = door.location[2] - door.dimensions[2] / 2 + sphere.dimensions[2] / 2
+    correct_z = door_2.location[2] - door_2.dimensions[2] / 2 + sphere.dimensions[2] / 2
     #move in y and z
     arm.location[1] = sphere.location[1] = correct_y
     arm.location[2] = sphere.location[2] = correct_z
@@ -347,7 +350,44 @@ def move_sphere_to_locker():
     arm.location[0] = placeholder
     set_keyframe_for_objects([arm])
 
-    #move to second locker and close it (3 sec)
+    #close lockers (4 secs)
+    #get to handle
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location = get_handle_location_for_door(door_2, locker_num_2)
+    set_keyframe_for_objects([arm])
+    set_keyframe_for_objects([door_2], data_path="rotation_euler")
+
+    #close door
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    door_2.rotation_euler[2] = radians(0)
+    door_open[int(locker_num_2)] = False
+    arm.location = get_handle_location_for_door(door_2, locker_num_2)
+    set_keyframe_for_objects([arm])
+    set_keyframe_for_objects([door_2], data_path="rotation_euler")
+
+    #get to handle
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location = get_handle_location_for_door(door, locker_num)
+    set_keyframe_for_objects([arm])
+    set_keyframe_for_objects([door], data_path="rotation_euler")
+
+    #close door
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    door.rotation_euler[2] = radians(0)
+    door_open[int(locker_num)] = False
+    arm.location = get_handle_location_for_door(door, locker_num)
+    set_keyframe_for_objects([arm])
+    set_keyframe_for_objects([door], data_path="rotation_euler")
+
+    ###14 SECONDS: get back to original position in 1 second
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location = starting_location
+    set_keyframe_for_objects([arm])
 
 ###################################################################
 
