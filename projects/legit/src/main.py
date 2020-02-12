@@ -22,6 +22,7 @@ objects = {
         'cube_5' : bpy.data.objects["Cube.005"],
         'cube_6' : bpy.data.objects["Cube.006"],
         'cube_7' : bpy.data.objects["Cube.007"],
+        'cube_8' : bpy.data.objects["Cube.008"],
     }, 
     'spheres' : {
         'sphere_0' : bpy.data.objects["Sphere"],
@@ -29,10 +30,12 @@ objects = {
         'sphere_2' : bpy.data.objects["Sphere.002"],
         'sphere_3' : bpy.data.objects["Sphere.003"],
         'sphere_4' : bpy.data.objects["Sphere.004"],
+        'sphere_4' : bpy.data.objects["Sphere.005"],
     },
     'cones' : {
         'cone_0' : bpy.data.objects["Cone"],
         'cone_1' : bpy.data.objects["Cone.001"],
+        'cone_1' : bpy.data.objects["Cone.002"],
     },
     'cylinders' : {
         'cylinder_0' : bpy.data.objects["Cylinder"],
@@ -42,20 +45,27 @@ objects = {
         'light_0' : bpy.data.lights["Light"],
     },
     'cameras' : {
-        'camera_0' : bpy.data.cameras["Camera"],
+        'camera_0' : bpy.data.objects["Camera"],
     },
     'robots' : {
-        'arm_0' : bpy.data.objects["arm"],
+        'arm' : bpy.data.objects["arm"],
+        'arm_color' : bpy.data.objects["arm.color"],
+        'arm_copy' : bpy.data.objects["arm.copy"],
     }
 }
 
 object_locations = {
-    'ground' : [
+    'ground_in' : [
         bpy.data.objects["Cube.002"],
         bpy.data.objects["Cube.004"],
         bpy.data.objects["Cube.007"],
         bpy.data.objects["Cone.001"],
         bpy.data.objects["Cylinder.001"],
+    ],
+    'ground_out' : [
+        bpy.data.objects["Cone.002"],
+        bpy.data.objects["Sphere.005"],
+        bpy.data.objects["Cube.008"],
     ],
     'loc_0': [
         bpy.data.objects["Sphere"],
@@ -186,6 +196,21 @@ def get_random_x_and_y_within_locker(door):
     y = random_scaled(boundary - margin, margin)
     return x, y
 
+def random_rotate_camera(camera):
+    #20% chance
+    if random() <= 0.2:
+        print("Camera rotated")
+        camera_x_max_boundary = radians(69)
+        camera_x_min_boundary = radians(56) 
+        camera_y_max_boundary = radians(20)
+        camera_y_min_boundary = radians(-11)
+        camera_z_max_boundary = radians(120)
+        camera_z_min_boundary = radians(100)
+        x_rot = random_scaled(camera_x_max_boundary, camera_x_min_boundary)
+        y_rot = random_scaled(camera_y_max_boundary, camera_y_min_boundary)
+        z_rot = random_scaled(camera_z_max_boundary, camera_z_min_boundary)
+        camera.rotation_euler = Vector([x_rot, y_rot, z_rot])
+
 ###################################################################
 
 #rendering utilities
@@ -230,7 +255,7 @@ def get_locker_loc_for_object(obj):
 #gets the location of the locker's handle
 def get_handle_location_for_object(obj):
     locker = get_locker_loc_for_object(obj)
-    if locker is not None and locker != 'ground':
+    if locker is not None and locker != 'ground_in' and locker != 'ground_out':
         locker_num = locker.split('_')[1]
         door = doors['door_' + locker_num]
         return get_handle_location_for_door(door, locker_num)
@@ -260,7 +285,7 @@ def move_sphere_to_locker():
     enable_collisions(get_all_objects(exceptions=["lights", "cameras"]))
 
     #get reference to the arm
-    arm = objects["robots"]["arm_0"]
+    arm = objects["robots"]["arm"]
     starting_location = [x for x in arm.location]
 
     #let the arm be controlled by the animation
@@ -441,6 +466,9 @@ out_path = argv[0]
 
 #set a random luminosity for the scene
 set_random_luminosity(objects["lights"]["light_0"])
+
+#set a random camera rotation (within boundaries) on a 20% chance
+random_rotate_camera(objects["cameras"]["camera_0"]) 
 
 #choose an activity and execute it
 random_activity = choose_activity()
