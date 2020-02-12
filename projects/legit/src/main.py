@@ -280,7 +280,7 @@ def move_sphere_to_locker():
     set_keyframe_for_objects([door], data_path="rotation_euler")
 
     #select a random object in another locker
-    locker_num_2, door_2 = get_random_locker_num_and_door(exceptions=[locker_num], nonempty=False)
+    locker_num_2, door_2 = get_random_locker_num_and_door(exceptions=[int(locker_num)], nonempty=False)
 
     #approach the second locker (1 sec)
     current_frame += render_config["fps"]
