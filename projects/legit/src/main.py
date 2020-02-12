@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from math import radians
 import sys
+from functools import partial
 
 render_config = {
     "fps": 12
@@ -143,6 +144,11 @@ actions = {
     'arm_to_object_w_object': "arm moved in front of object {} holding object {}",
     'arm_position_object_in_locker': "arm positioned object {} in locker {}",
     'arm_to_origin': "arm moved back to original position",
+    'arm_exit_scene' : "arm exited from scene",
+    "arm_in_scene" : "arm entered in scene",
+    "arm_in_scene_w_object" : "arm entered in scene holding {}",
+    "arm_to_ground" : "arm put object {} on the ground",
+    "arm_exit_scene_w_object" : "arm exited from scene holding {}",
 }
 
 
@@ -166,12 +172,12 @@ def choose_activity():
 #a location can be selected as well
 #example: ["cubes", "spheres"] --> select a random cube or sphere
 #["cubes"] --> selects a random cube
-def select_random_object(choices=["cubes", "spheres", "cylinders", "cones"], location=None):
+def select_random_object(choices=["cubes", "spheres", "cylinders", "cones"], locations=None):
     list_obj = []
     for c in choices:
         list_obj.extend(objects[c].values())
-    if location is not None:
-        list_obj = [x for x in list_obj if x in object_locations[location]]
+    if locations is not None:
+        list_obj = [x for x in list_obj for loc in locations if x in object_locations[loc]]
     return choice(list_obj)
 
 def get_random_locker_num_and_door(exceptions=[], nonempty=False):
@@ -211,6 +217,13 @@ def random_rotate_camera(camera):
         z_rot = random_scaled(camera_z_max_boundary, camera_z_min_boundary)
         camera.rotation_euler = Vector([x_rot, y_rot, z_rot])
 
+def select_random_coordinates_on_visible_ground():
+    x_min = 1.12
+    x_max = 2.25
+    y_min = -6.6
+    y_max = 5.55
+    return random_scaled(x_max, x_min), random_scaled(y_max, y_min)
+
 ###################################################################
 
 #rendering utilities
@@ -247,7 +260,7 @@ def enable_collisions(objs):
 
 #returns a string that indicates where the object is
 def get_locker_loc_for_object(obj):
-    for locker in object_locations.keys():
+    for locker in [x for x in object_locations.keys() if x != "ground_in" and x != "ground_out"]:
         if obj in object_locations[locker]:
             return locker
     return None
@@ -453,10 +466,299 @@ def move_sphere_to_locker():
 
     return moves
 
+def put_object_in_scene(must_put_in_locker=False):
+    moves = []
+    #go get an object out of scene
+    ##choose a random out_of_scene object
+    grabbed = select_random_object(locations=["ground_out"])
+    print("Selected " + str(grabbed))
+
+    #enable all collisions
+    enable_collisions(get_all_objects(exceptions=["lights", "cameras"]))
+
+    #get reference to the arm
+    arm = objects["robots"]["arm"]
+    starting_location = [x for x in arm.location]
+
+    #let the arm be controlled by the animation
+    arm.rigid_body.kinematic = True
+    #temporarily disable rigid_body physics for the grabbed object
+    grabbed.rigid_body.kinematic = True
+
+    #set the first keyframe for the arm and the grabbed object
+    current_frame = 0
+    set_current_frame(current_frame)
+    set_keyframe_for_objects([arm, grabbed])
+
+    #go take the grabbed object (1 sec)
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location[0] = grabbed.location[0]
+    arm.location[1] = grabbed.location[1]
+    #apply correction for z axis to get on top of the object
+    arm.location[2] = grabbed.location[2] + (grabbed.dimensions[2] / 2)
+    moves.append(actions["arm_exit_scene"].format(str(grabbed)))
+    moves.append(actions["arm_to_object"].format(str(grabbed)))
+    moves.append(actions["arm_grab_object"].format(str(grabbed)))
+    set_keyframe_for_objects([arm, grabbed])
+
+    #bring it in scene --> random choice
+    ##put in on the ground and stay still?
+    ##put it in a locker
+    #until decision is made, leave object on the ground
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    x, y = select_random_coordinates_on_visible_ground()
+    arm.location[0] = grabbed.location[0] = x
+    arm.location[1] = grabbed.location[1] = y
+    set_keyframe_for_objects([arm, grabbed])
+    moves.append(actions["arm_in_scene_w_object"].format(str(grabbed)))
+
+    #rest for a second 
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    set_keyframe_for_objects([arm, grabbed])
+
+    if must_put_in_locker:
+        #choose random locker
+        locker_num, door = get_random_locker_num_and_door()
+
+        #move arm to the handle
+        current_frame += render_config["fps"]
+        set_current_frame(current_frame)
+        arm.location = get_handle_location_for_door(door, locker_num)
+        set_keyframe_for_objects([arm])
+        moves.append(actions["arm_to_closed_locker"].format(str(locker_num)))
+
+        #set keyframe for door rotation
+        set_keyframe_for_objects([door], data_path="rotation_euler")
+
+        #open locker
+        current_frame += render_config["fps"]
+        set_current_frame(current_frame)
+        #radians operations are required for rotations
+        door.rotation_euler[2] = radians(-90)
+        door_open[int(locker_num)] = True
+        arm.location = get_handle_location_for_door(door, locker_num)
+        set_keyframe_for_objects([arm])
+        set_keyframe_for_objects([door], data_path="rotation_euler")
+        moves.append(actions["arm_open_door"].format(str(locker_num)))
+
+        #get back to object
+        current_frame += render_config["fps"]
+        set_current_frame(current_frame)
+        arm.location[0] = grabbed.location[0]
+        arm.location[1] = grabbed.location[1]
+        #apply correction for z axis to get on top of the object
+        arm.location[2] = grabbed.location[2] + (grabbed.dimensions[2] / 2)
+        moves.append(actions["arm_to_object"].format(str(grabbed)))
+        moves.append(actions["arm_grab_object"].format(str(grabbed)))
+        set_keyframe_for_objects([arm, grabbed])
+
+        #put object in locker
+        #first move in y and z to locker
+        current_frame += render_config["fps"]
+        set_current_frame(current_frame)
+        #x and y are random within the locker boundaries
+        positioning_x, positioning_y = get_random_x_and_y_within_locker(door)
+        correct_x = door.location[0] - positioning_x
+        correct_y = door.location[1] + positioning_y
+        #correct z to put the object exactly at the height of the shelf of the locker
+        correct_z = door.location[2] - door.dimensions[2] / 2 + grabbed.dimensions[2] / 2
+        #move in y and z
+        arm.location[1] = grabbed.location[1] = correct_y
+        arm.location[2] = grabbed.location[2] = correct_z
+        set_keyframe_for_objects([arm, grabbed])
+        moves.append(actions["arm_to_open_locker_w_object"].format(str(locker_num), str(grabbed)))
+
+        #put it in(1 sec)
+        #move in x
+        current_frame += render_config["fps"]
+        set_current_frame(current_frame)
+        placeholder = arm.location[0]
+        arm.location[0] = grabbed.location[0] = correct_x
+        set_keyframe_for_objects([arm, grabbed])
+        moves.append(actions["arm_position_object_in_locker"].format(str(grabbed), str(locker_num)))
+
+        #get out (1 sec)
+        current_frame += render_config["fps"]
+        set_current_frame(current_frame)
+        arm.location[0] = placeholder
+        set_keyframe_for_objects([arm])
+        moves.append(actions["arm_out_locker"].format(str(locker_num)))
+
+        #close lockers
+        #get to handle
+        current_frame += render_config["fps"]
+        set_current_frame(current_frame)
+        arm.location = get_handle_location_for_door(door, locker_num)
+        set_keyframe_for_objects([arm])
+        set_keyframe_for_objects([door], data_path="rotation_euler")
+
+        #close door
+        current_frame += render_config["fps"]
+        set_current_frame(current_frame)
+        door.rotation_euler[2] = radians(0)
+        door_open[int(locker_num)] = False
+        arm.location = get_handle_location_for_door(door, locker_num)
+        set_keyframe_for_objects([arm])
+        set_keyframe_for_objects([door], data_path="rotation_euler")
+        moves.append(actions["arm_close_door"].format(str(locker_num)))
+
+    #return to origin
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location = starting_location
+    set_keyframe_for_objects([arm])
+    moves.append(actions["arm_to_origin"])
+
+    return moves
+
+def take_object_out_of_scene():
+    moves = []
+
+    #select a random object in a locker
+    grabbed = select_random_object(locations=[x for x in object_locations.keys() if x not in ["ground_in", "ground_out"]])
+    print("Selected " + str(grabbed))
+
+    #enable all collisions
+    enable_collisions(get_all_objects(exceptions=["lights", "cameras"]))
+
+    #get reference to the arm
+    arm = objects["robots"]["arm"]
+    starting_location = [x for x in arm.location]
+
+    #let the arm be controlled by the animation
+    arm.rigid_body.kinematic = True
+    #temporarily disable rigid_body physics for the sphere
+    grabbed.rigid_body.kinematic = True
+
+    #set the first keyframe for the arm, the object and the locker door
+    current_frame = 0
+    set_current_frame(current_frame)
+    set_keyframe_for_objects([arm, grabbed])
+
+    locker_num = get_locker_loc_for_object(grabbed).split("_")[1]
+
+    door = doors['door_' + str(locker_num)]
+
+    #approach its locker (1 sec)
+    #get the locker location
+    handle_0 = get_handle_location_for_object(grabbed)
+    if handle_0 is None:
+        return None #nothing happens
+    #move arm to locker
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location = handle_0
+    set_keyframe_for_objects([arm, door, grabbed])
+    set_keyframe_for_objects([door], data_path="rotation_euler")
+    moves.append(actions["arm_to_closed_locker"].format(str(locker_num)))
+    
+    #open the locker (1 secs)
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    #radians operations are required for rotations
+    door.rotation_euler[2] = radians(-90)
+    door_open[int(locker_num)] = True
+    arm.location = get_handle_location_for_object(grabbed)
+    set_keyframe_for_objects([arm])
+    set_keyframe_for_objects([door], data_path="rotation_euler")
+    moves.append(actions["arm_open_door"].format(str(locker_num)))
+
+    #get in front of the object (1 sec)
+    #move in y and z
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location[1] = grabbed.location[1]
+    #apply correction for z axis to get on top of the object
+    arm.location[2] = grabbed.location[2] + grabbed.dimensions[2] / 2
+    set_keyframe_for_objects([arm])
+    moves.append(actions["arm_to_object"].format(str(grabbed)))
+
+    #get item (1 sec)
+    #move in x
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    placeholder = arm.location[0]
+    arm.location[0] = grabbed.location[0]
+    set_keyframe_for_objects([arm, grabbed])
+    moves.append(actions["arm_into_locker"].format(str(locker_num)))
+    moves.append(actions["arm_grab_object"].format(str(grabbed)))
+
+    #get out with item (1 sec)
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location[0] = grabbed.location[0] = placeholder
+    set_keyframe_for_objects([arm, grabbed])
+    moves.append(actions["arm_out_locker_w_object"].format(str(locker_num), str(grabbed)))
+
+    #put item on ground
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    x, y = select_random_coordinates_on_visible_ground()
+    arm.location[0] = grabbed.location[0] = x
+    arm.location[1] = grabbed.location[1] = y
+    grabbed.location[2] = grabbed.dimensions[2] / 2
+    arm.location[2] = grabbed.location[2] + grabbed.dimensions[2] / 2
+    set_keyframe_for_objects([arm, grabbed])
+    moves.append(actions["arm_to_ground"].format(str(grabbed)))
+
+    #come back and close door
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location = get_handle_location_for_door(door, locker_num)
+    set_keyframe_for_objects([arm])
+    set_keyframe_for_objects([door], data_path="rotation_euler")
+    moves.append(actions["arm_to_open_locker"].format(str(locker_num)))
+
+    #close door
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    door.rotation_euler[2] = radians(0)
+    door_open[int(locker_num)] = False
+    arm.location = get_handle_location_for_door(door, locker_num)
+    set_keyframe_for_objects([arm])
+    set_keyframe_for_objects([door], data_path="rotation_euler")
+    moves.append(actions["arm_close_door"].format(str(locker_num)))
+
+    #get back to the object
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location[0] = grabbed.location[0]
+    arm.location[1] = grabbed.location[1]
+    #apply correction for z axis to get on top of the object
+    arm.location[2] = grabbed.location[2] + (grabbed.dimensions[2] / 2)
+    moves.append(actions["arm_to_object"].format(str(grabbed)))
+    moves.append(actions["arm_grab_object"].format(str(grabbed)))
+    set_keyframe_for_objects([arm, grabbed])
+
+    #randomly choose where to put the object
+    x, y = select_random_coordinates_on_visible_ground()
+    x += 7 #move to invisible ground
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location[0] = grabbed.location[0] = x
+    arm.location[1] = grabbed.location[1] = y
+    set_keyframe_for_objects([arm, grabbed])
+    moves.append(actions["arm_exit_scene_w_object"].format(str(grabbed)))
+
+    #return to origin
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    arm.location = starting_location
+    set_keyframe_for_objects([arm])
+    moves.append(actions["arm_to_origin"])
+
+    return moves
+
 ###################################################################
 
 activities = {
-    'move_sphere_to_locker' : move_sphere_to_locker,
+    'move_sphere_to_other_locker' : move_sphere_to_locker,
+    'get_new_object' : partial(put_object_in_scene, must_put_in_locker=False),
+    'put_new_object_in_locker' : partial(put_object_in_scene, must_put_in_locker=True),
+    'take_object_out_of_scene' : take_object_out_of_scene,
 }
 
 #get the path for saving the files
