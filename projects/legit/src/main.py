@@ -400,7 +400,8 @@ def move_sphere_to_locker():
     correct_z = door_2.location[2] - door_2.dimensions[2] / 2 + sphere.dimensions[2] / 2
     #move in y and z
     arm.location[1] = sphere.location[1] = correct_y
-    arm.location[2] = sphere.location[2] = correct_z
+    sphere.location[2] = correct_z
+    arm.location[2] = correct_z + sphere.dimensions[2]
     set_keyframe_for_objects([arm, sphere])
     moves.append(actions["arm_to_open_locker_w_object"].format(str(locker_num_2), str(sphere)))
 
