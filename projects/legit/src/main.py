@@ -118,6 +118,23 @@ door_open = [False] * len(doors.keys())
 
 brightness_levels = [x for x in range(2000, 60000, 1000)]
 
+actions = {
+    'arm_to_open_locker': "arm moved to open locker {}",
+    'arm_to_closed_locker': "arm moved to closed locker {}",
+    'arm_to_object': "arm moved in front of object {}",
+    'arm_open_door': "arm opened door {}",
+    'arm_close_door': "arm closed door {}",
+    'arm_into_locker': "arm moved into locker {}",
+    'arm_out_locker': "arm moved out of locker {}",
+    'arm_grab_object': 'arm grabbed object {}',
+    'arm_out_locker_w_object': "arm moved out of locker {} holding object {}",
+    'arm_to_closed_locker_w_object': "arm moved to closed locker {} holding object {}",
+    'arm_to_open_locker_w_object': "arm moved to open locker {} holding object {}",
+    'arm_to_object_w_object': "arm moved in front of object {} holding object {}",
+    'arm_position_object_in_locker': "arm positioned object {} in locker {}",
+    'arm_to_origin': "arm moved back to original position",
+}
+
 
 ###################################################################
 
@@ -232,6 +249,9 @@ def get_handle_location_for_door(door, locker_num):
 ###################################################################
 
 def move_sphere_to_locker():
+
+    moves = []
+
     #select a random sphere
     sphere = select_random_object(choices=["spheres"])
     print("Selected " + str(sphere))
@@ -268,6 +288,7 @@ def move_sphere_to_locker():
     arm.location = handle_0
     set_keyframe_for_objects([arm, door, sphere])
     set_keyframe_for_objects([door], data_path="rotation_euler")
+    moves.append(actions["arm_to_closed_locker"].format(str(locker_num)))
     
     #open the locker (1 secs)
     current_frame += render_config["fps"]
@@ -278,6 +299,7 @@ def move_sphere_to_locker():
     arm.location = get_handle_location_for_object(sphere)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door], data_path="rotation_euler")
+    moves.append(actions["arm_open_door"].format(str(locker_num)))
 
     #select a random object in another locker
     locker_num_2, door_2 = get_random_locker_num_and_door(exceptions=[int(locker_num)], nonempty=False)
@@ -288,6 +310,7 @@ def move_sphere_to_locker():
     arm.location = get_handle_location_for_door(door_2, locker_num_2)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door_2], data_path="rotation_euler")
+    moves.append(actions["arm_to_closed_locker"].format(str(locker_num_2)))
 
     #open the second locker (1 sec)
     current_frame += render_config["fps"]
@@ -297,6 +320,7 @@ def move_sphere_to_locker():
     arm.location = get_handle_location_for_door(door_2, locker_num_2)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door_2], data_path="rotation_euler")
+    moves.append(actions["arm_open_door"].format(str(locker_num_2)))
 
     #get in front of the object of the first locker (1 sec)
     #move in y and z
@@ -306,6 +330,8 @@ def move_sphere_to_locker():
     #apply correction for z axis to get on top of the object
     arm.location[2] = sphere.location[2] + (sphere.dimensions[2] / 2)
     set_keyframe_for_objects([arm])
+    moves.append(actions["arm_to_open_locker"].format(str(locker_num)))
+    moves.append(actions["arm_to_object"].format(str(sphere)))
 
     #get item (1 sec)
     #move in x
@@ -314,12 +340,15 @@ def move_sphere_to_locker():
     placeholder = arm.location[0]
     arm.location[0] = sphere.location[0]
     set_keyframe_for_objects([arm, sphere])
+    moves.append(actions["arm_into_locker"].format(str(locker_num)))
+    moves.append(actions["arm_grab_object"].format(str(sphere)))
 
     #get out with item (1 sec)
     current_frame += render_config["fps"]
     set_current_frame(current_frame)
     arm.location[0] = sphere.location[0] = placeholder
     set_keyframe_for_objects([arm, sphere])
+    moves.append(actions["arm_out_locker_w_object"].format(str(locker_num), str(sphere)))
 
     #take the item to second locker (1 sec)
     #first move in y and z to second locker
@@ -335,6 +364,8 @@ def move_sphere_to_locker():
     arm.location[1] = sphere.location[1] = correct_y
     arm.location[2] = sphere.location[2] = correct_z
     set_keyframe_for_objects([arm, sphere])
+    moves.append(actions["arm_to_open_locker_w_object"].format(str(locker_num_2), str(sphere)))
+
 
     #put it in(1 sec)
     #move in x
@@ -343,12 +374,14 @@ def move_sphere_to_locker():
     placeholder = arm.location[0]
     arm.location[0] = sphere.location[0] = correct_x
     set_keyframe_for_objects([arm, sphere])
+    moves.append(actions["arm_position_object_in_locker"].format(str(sphere), str(locker_num_2)))
 
     #get out (1 sec)
     current_frame += render_config["fps"]
     set_current_frame(current_frame)
     arm.location[0] = placeholder
     set_keyframe_for_objects([arm])
+    moves.append(actions["arm_out_locker"].format(str(locker_num_2)))
 
     #close lockers (4 secs)
     #get to handle
@@ -366,6 +399,7 @@ def move_sphere_to_locker():
     arm.location = get_handle_location_for_door(door_2, locker_num_2)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door_2], data_path="rotation_euler")
+    moves.append(actions["arm_close_door"].format(str(locker_num_2)))
 
     #get to handle
     current_frame += render_config["fps"]
@@ -373,6 +407,7 @@ def move_sphere_to_locker():
     arm.location = get_handle_location_for_door(door, locker_num)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door], data_path="rotation_euler")
+    moves.append(actions["arm_to_open_locker"].format(str(locker_num)))
 
     #close door
     current_frame += render_config["fps"]
@@ -382,12 +417,16 @@ def move_sphere_to_locker():
     arm.location = get_handle_location_for_door(door, locker_num)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door], data_path="rotation_euler")
+    moves.append(actions["arm_close_door"].format(str(locker_num)))
 
     ###14 SECONDS: get back to original position in 1 second
     current_frame += render_config["fps"]
     set_current_frame(current_frame)
     arm.location = starting_location
     set_keyframe_for_objects([arm])
+    moves.append(actions["arm_to_origin"])
+
+    return moves
 
 ###################################################################
 
@@ -405,15 +444,21 @@ set_random_luminosity(objects["lights"]["light_0"])
 
 #choose an activity and execute it
 random_activity = choose_activity()
-activities[random_activity]()
+moves = activities[random_activity]()
 
 #set filepath
-bpy.context.scene.render.filepath = (os.path.join(out_path, random_activity, datetime.now().strftime("%d%m%Y_%H%M%S"), "frame"))
+folder = os.path.join(out_path, random_activity, datetime.now().strftime("%d%m%Y_%H%M%S"))
+bpy.context.scene.render.filepath = os.path.join(folder, "frame")
 
 #bake physics
 for obj in get_all_objects(exceptions=["lights", "cameras"]):
     obj.select_set(True)
     bpy.ops.ptcache.bake_all(bake=True)
 
-#end activity
+#render activity
 render_and_end()
+
+#create actions file
+with open(os.path.join(folder, 'actions.txt'), 'w+') as f:
+    for action in moves:
+        f.write("%s\n" % action)
