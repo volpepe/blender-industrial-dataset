@@ -290,8 +290,8 @@ def move_sphere_to_locker():
 
     moves = []
 
-    #select a random sphere
-    sphere = select_random_object(choices=["spheres"])
+    #select a random sphere in a locker
+    sphere = select_random_object(choices=["spheres"], locations=[x for x in object_locations.keys() if x not in ["ground_in", "ground_out"]])
     print("Selected " + str(sphere))
 
     #enable all collisions
@@ -756,9 +756,9 @@ def take_object_out_of_scene():
 
 activities = {
     'move_sphere_to_other_locker' : move_sphere_to_locker,
-    'get_new_object' : partial(put_object_in_scene, must_put_in_locker=False),
-    'put_new_object_in_locker' : partial(put_object_in_scene, must_put_in_locker=True),
-    'take_object_out_of_scene' : take_object_out_of_scene,
+    #'get_new_object' : partial(put_object_in_scene, must_put_in_locker=False),
+    #'put_new_object_in_locker' : partial(put_object_in_scene, must_put_in_locker=True),
+    #'take_object_out_of_scene' : take_object_out_of_scene,
 }
 
 #get the path for saving the files
