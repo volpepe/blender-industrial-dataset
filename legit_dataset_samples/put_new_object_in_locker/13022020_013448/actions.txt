@@ -1,0 +1,13 @@
+arm exited from scene
+arm moved in front of object <bpy_struct, Object("Cone.002")>
+arm grabbed object <bpy_struct, Object("Cone.002")>
+arm entered in scene holding <bpy_struct, Object("Cone.002")>
+arm moved to closed locker 1
+arm opened door 1
+arm moved in front of object <bpy_struct, Object("Cone.002")>
+arm grabbed object <bpy_struct, Object("Cone.002")>
+arm moved to open locker 1 holding object <bpy_struct, Object("Cone.002")>
+arm positioned object <bpy_struct, Object("Cone.002")> in locker 1
+arm moved out of locker 1
+arm closed door 1
+arm moved back to original position

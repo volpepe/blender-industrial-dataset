@@ -401,7 +401,7 @@ def move_sphere_to_locker():
     #move in y and z
     arm.location[1] = sphere.location[1] = correct_y
     sphere.location[2] = correct_z
-    arm.location[2] = correct_z + sphere.dimensions[2]
+    arm.location[2] = correct_z + sphere.dimensions[2] / 2
     set_keyframe_for_objects([arm, sphere])
     moves.append(actions["arm_to_open_locker_w_object"].format(str(locker_num_2), str(sphere)))
 
@@ -551,7 +551,7 @@ def put_object_in_scene(must_put_in_locker=False):
         arm.location[0] = grabbed.location[0]
         arm.location[1] = grabbed.location[1]
         #apply correction for z axis to get on top of the object
-        arm.location[2] = grabbed.location[2] + (grabbed.dimensions[2] / 2)
+        arm.location[2] = grabbed.location[2] + grabbed.dimensions[2] / 2
         moves.append(actions["arm_to_object"].format(str(grabbed)))
         moves.append(actions["arm_grab_object"].format(str(grabbed)))
         set_keyframe_for_objects([arm, grabbed])
@@ -568,7 +568,8 @@ def put_object_in_scene(must_put_in_locker=False):
         correct_z = door.location[2] - door.dimensions[2] / 2 + grabbed.dimensions[2] / 2
         #move in y and z
         arm.location[1] = grabbed.location[1] = correct_y
-        arm.location[2] = grabbed.location[2] = correct_z
+        grabbed.location[2] = correct_z
+        arm.location[2] = correct_z + grabbed.dimensions[2] / 2
         set_keyframe_for_objects([arm, grabbed])
         moves.append(actions["arm_to_open_locker_w_object"].format(str(locker_num), str(grabbed)))
 
@@ -734,6 +735,11 @@ def take_object_out_of_scene():
     moves.append(actions["arm_grab_object"].format(str(grabbed)))
     set_keyframe_for_objects([arm, grabbed])
 
+    #rest for a second
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    set_keyframe_for_objects([arm, grabbed])
+
     #randomly choose where to put the object
     x, y = select_random_coordinates_on_visible_ground()
     x += 7 #move to invisible ground
@@ -756,10 +762,10 @@ def take_object_out_of_scene():
 ###################################################################
 
 activities = {
-    'move_sphere_to_other_locker' : move_sphere_to_locker,
+    #'move_sphere_to_other_locker' : move_sphere_to_locker,
     #'get_new_object' : partial(put_object_in_scene, must_put_in_locker=False),
     #'put_new_object_in_locker' : partial(put_object_in_scene, must_put_in_locker=True),
-    #'take_object_out_of_scene' : take_object_out_of_scene,
+    'take_object_out_of_scene' : take_object_out_of_scene,
 }
 
 #get the path for saving the files
