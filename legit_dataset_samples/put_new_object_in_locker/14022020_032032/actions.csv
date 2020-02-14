@@ -1,0 +1,14 @@
+who,doesWhat,toWhom,whereAdverb,where,whileDoingWhat,whileToWhom
+arm,moved,itself,out of,scene,,
+arm,moved,itself,in front of,cone_1,,
+arm,grabbed,cone_1,,,,
+arm,moved,itself,into,scene,holding,cone_1
+arm,moved,itself,to,locker_4,,
+arm,opened,door_4,,,,
+arm,moved,itself,in front of,cone_1,,
+arm,grabbed,cone_1,,,,
+arm,moved,itself,in front of,locker_4,holding,cone_1
+arm,positioned,cone_1,into,locker_4,,
+arm,moved,itself,out of,locker_4,,
+arm,closed,door_4,,,,
+arm,moved,itself,to,original position,,

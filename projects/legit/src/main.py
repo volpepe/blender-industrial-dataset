@@ -125,10 +125,16 @@ doors = {
     'door_13' : bpy.data.objects["Door_13"],
 }
 
-def format_objs(obj, typ):
-    for key, val in objects.get(typ).items():
-        if obj == val:
-            return key
+def format_objs(obj, typ=None):
+    if typ is not None:
+        for key, val in objects.get(typ).items():
+            if obj == val:
+                return key
+    else:
+        for diction in objects.values():
+            for key, val in diction.items(): 
+                if obj == val:
+                    return key
     return None
 
 def format_lockers(locker_num):
@@ -479,11 +485,11 @@ def move_sphere_to_locker():
     current_frame = advance_frame(current_frame)
     return_to_origin(arm, starting_location)
     moves.append(action_builder("arm_to_origin", format_arm))
-    
+
     return moves
 
 def put_object_in_scene(must_put_in_locker=False):
-    moves = []
+    moves = [phrase_structure]
     #go get an object out of scene
     ##choose a random out_of_scene object
     grabbed = select_random_object(locations=["ground_out"])
@@ -506,15 +512,19 @@ def put_object_in_scene(must_put_in_locker=False):
     set_current_frame(current_frame)
     set_keyframe_for_objects([arm, grabbed])
 
+    format_arm = format_objs(arm, 'robots')
+    format_grab = format_objs(grabbed)
+
     #go take the grabbed object (1 sec)
     current_frame = advance_frame(current_frame)
     arm.location[0] = grabbed.location[0]
     arm.location[1] = grabbed.location[1]
     #apply correction for z axis to get on top of the object
     arm.location[2] = grabbed.location[2] + (grabbed.dimensions[2] / 2)
-    moves.append(actions["arm_exit_scene"].format(str(grabbed)))
-    moves.append(actions["arm_to_object"].format(str(grabbed)))
-    moves.append(actions["arm_grab_object"].format(str(grabbed)))
+    moves.append(action_builder("arm_exit_scene", format_arm))
+    #not seen by camera
+    #moves.append(action_builder("arm_to_object", format_arm, format_grab))
+    #moves.append(action_builder("arm_grab_object", format_arm, format_grab))
     set_keyframe_for_objects([arm, grabbed])
 
     #bring it in scene --> random choice
@@ -526,7 +536,7 @@ def put_object_in_scene(must_put_in_locker=False):
     arm.location[0] = grabbed.location[0] = x
     arm.location[1] = grabbed.location[1] = y
     set_keyframe_for_objects([arm, grabbed])
-    moves.append(actions["arm_in_scene_w_object"].format(str(grabbed)))
+    moves.append(action_builder("arm_in_scene_w_object", format_arm, format_grab))
 
     #rest for a second 
     current_frame = advance_frame(current_frame)
@@ -536,11 +546,14 @@ def put_object_in_scene(must_put_in_locker=False):
         #choose random locker
         locker_num, door = get_random_locker_num_and_door()
 
+        format_door = format_doors(locker_num)
+        format_locker = format_lockers(locker_num)
+
         #move arm to the handle
         current_frame = advance_frame(current_frame)
         arm.location = get_handle_location_for_door(door, locker_num)
         set_keyframe_for_objects([arm])
-        moves.append(actions["arm_to_closed_locker"].format(str(locker_num)))
+        moves.append(action_builder("arm_to_locker", format_arm, format_locker))
 
         #set keyframe for door rotation
         set_keyframe_for_objects([door], data_path="rotation_euler")
@@ -548,7 +561,7 @@ def put_object_in_scene(must_put_in_locker=False):
         #open locker
         current_frame = advance_frame(current_frame)
         open_locker(arm, door, locker_num)
-        moves.append(actions["arm_open_door"].format(str(locker_num)))
+        moves.append(action_builder("arm_open_door", format_arm, format_door))
 
         #get back to object
         current_frame = advance_frame(current_frame)
@@ -556,8 +569,8 @@ def put_object_in_scene(must_put_in_locker=False):
         arm.location[1] = grabbed.location[1]
         #apply correction for z axis to get on top of the object
         arm.location[2] = grabbed.location[2] + grabbed.dimensions[2] / 2
-        moves.append(actions["arm_to_object"].format(str(grabbed)))
-        moves.append(actions["arm_grab_object"].format(str(grabbed)))
+        moves.append(action_builder("arm_to_object", format_arm, format_grab))
+        moves.append(action_builder("arm_grab_object", format_arm, format_grab))
         set_keyframe_for_objects([arm, grabbed])
 
         #put object in locker
@@ -574,7 +587,7 @@ def put_object_in_scene(must_put_in_locker=False):
         grabbed.location[2] = correct_z
         arm.location[2] = correct_z + grabbed.dimensions[2] / 2
         set_keyframe_for_objects([arm, grabbed])
-        moves.append(actions["arm_to_open_locker_w_object"].format(str(locker_num), str(grabbed)))
+        moves.append(action_builder("arm_to_locker_w_object", format_arm, format_locker, format_grab))
 
         #put it in(1 sec)
         #move in x
@@ -582,13 +595,13 @@ def put_object_in_scene(must_put_in_locker=False):
         placeholder = arm.location[0]
         arm.location[0] = grabbed.location[0] = correct_x
         set_keyframe_for_objects([arm, grabbed])
-        moves.append(actions["arm_position_object_in_locker"].format(str(grabbed), str(locker_num)))
-
+        moves.append(action_builder("arm_position_object_in_locker", format_arm, format_grab, format_locker))
+    
         #get out (1 sec)
         current_frame = advance_frame(current_frame)
         arm.location[0] = placeholder
         set_keyframe_for_objects([arm])
-        moves.append(actions["arm_out_locker"].format(str(locker_num)))
+        moves.append(action_builder("arm_out_locker", format_arm, format_locker))
 
         #close lockers
         #get to handle
@@ -600,12 +613,12 @@ def put_object_in_scene(must_put_in_locker=False):
         #close door
         current_frame = advance_frame(current_frame)
         close_door(arm, door, locker_num)
-        moves.append(actions["arm_close_door"].format(str(locker_num)))
+        moves.append(action_builder("arm_close_door", format_arm, format_door))
 
     #return to origin
     current_frame = advance_frame(current_frame)
     return_to_origin(arm, starting_location)
-    moves.append(actions["arm_to_origin"])
+    moves.append(action_builder("arm_to_origin", format_arm))
 
     return moves
 
@@ -637,6 +650,11 @@ def take_object_out_of_scene():
 
     door = doors['door_' + str(locker_num)]
 
+    format_arm = format_objs(arm, 'robots')
+    format_grab = format_objs(grabbed)
+    format_locker = format_lockers(locker_num)
+    format_door = format_doors(locker_num)
+
     #approach its locker (1 sec)
     #get the locker location
     handle_0 = get_handle_location_for_object(grabbed)
@@ -647,12 +665,12 @@ def take_object_out_of_scene():
     arm.location = handle_0
     set_keyframe_for_objects([arm, door, grabbed])
     set_keyframe_for_objects([door], data_path="rotation_euler")
-    moves.append(actions["arm_to_closed_locker"].format(str(locker_num)))
+    moves.append(action_builder("arm_to_locker", format_arm, format_locker))
     
     #open the locker (1 secs)
     current_frame = advance_frame(current_frame)
     open_locker(arm, door, locker_num)
-    moves.append(actions["arm_open_door"].format(str(locker_num)))
+    moves.append(action_builder("arm_open_door", format_arm, format_door))
 
     #get in front of the object (1 sec)
     #move in y and z
@@ -661,22 +679,22 @@ def take_object_out_of_scene():
     #apply correction for z axis to get on top of the object
     arm.location[2] = grabbed.location[2] + grabbed.dimensions[2] / 2
     set_keyframe_for_objects([arm])
-    moves.append(actions["arm_to_object"].format(str(grabbed)))
-
+    moves.append(action_builder("arm_to_object", format_arm, format_grab))
+    
     #get item (1 sec)
     #move in x
     current_frame = advance_frame(current_frame)
     placeholder = arm.location[0]
     arm.location[0] = grabbed.location[0]
     set_keyframe_for_objects([arm, grabbed])
-    moves.append(actions["arm_into_locker"].format(str(locker_num)))
-    moves.append(actions["arm_grab_object"].format(str(grabbed)))
+    moves.append(action_builder("arm_into_locker", format_arm, format_locker))
+    moves.append(action_builder("arm_grab_object", format_arm, format_grab))
 
     #get out with item (1 sec)
     current_frame = advance_frame(current_frame)
     arm.location[0] = grabbed.location[0] = placeholder
     set_keyframe_for_objects([arm, grabbed])
-    moves.append(actions["arm_out_locker_w_object"].format(str(locker_num), str(grabbed)))
+    moves.append(action_builder("arm_out_locker_w_object", format_arm, format_locker, format_grab))
 
     #put item on ground
     current_frame = advance_frame(current_frame)
@@ -686,19 +704,19 @@ def take_object_out_of_scene():
     grabbed.location[2] = grabbed.dimensions[2] / 2
     arm.location[2] = grabbed.location[2] + grabbed.dimensions[2] / 2
     set_keyframe_for_objects([arm, grabbed])
-    moves.append(actions["arm_to_ground"].format(str(grabbed)))
+    moves.append(action_builder("arm_to_ground", format_arm, format_grab))
 
     #come back and close door
     current_frame = advance_frame(current_frame)
     arm.location = get_handle_location_for_door(door, locker_num)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door], data_path="rotation_euler")
-    moves.append(actions["arm_to_open_locker"].format(str(locker_num)))
+    moves.append(action_builder("arm_to_open_locker", format_arm, format_locker))
 
     #close door
     current_frame = advance_frame(current_frame)
     close_door(arm, door, locker_num)
-    moves.append(actions["arm_close_door"].format(str(locker_num)))
+    moves.append(action_builder("arm_close_door", format_arm, format_locker))
 
     #get back to the object
     current_frame = advance_frame(current_frame)
@@ -706,8 +724,8 @@ def take_object_out_of_scene():
     arm.location[1] = grabbed.location[1]
     #apply correction for z axis to get on top of the object
     arm.location[2] = grabbed.location[2] + (grabbed.dimensions[2] / 2)
-    moves.append(actions["arm_to_object"].format(str(grabbed)))
-    moves.append(actions["arm_grab_object"].format(str(grabbed)))
+    moves.append(action_builder("arm_to_object", format_arm, format_grab))
+    moves.append(action_builder("arm_grab_object", format_arm, format_grab))
     set_keyframe_for_objects([arm, grabbed])
 
     #rest for a second
@@ -721,12 +739,12 @@ def take_object_out_of_scene():
     arm.location[0] = grabbed.location[0] = x
     arm.location[1] = grabbed.location[1] = y
     set_keyframe_for_objects([arm, grabbed])
-    moves.append(actions["arm_exit_scene_w_object"].format(str(grabbed)))
+    moves.append(action_builder("arm_exit_scene_w_object", format_arm, format_grab))
 
     #return to origin
     current_frame = advance_frame(current_frame)
     return_to_origin(arm, starting_location)
-    moves.append(actions["arm_to_origin"])
+    moves.append(action_builder("arm_to_origin", format_arm))
 
     return moves
 
@@ -734,9 +752,9 @@ def take_object_out_of_scene():
 
 activities = {
     'move_sphere_to_other_locker' : move_sphere_to_locker,
-    #'get_new_object' : partial(put_object_in_scene, must_put_in_locker=False),
-    #'put_new_object_in_locker' : partial(put_object_in_scene, must_put_in_locker=True),
-    #'take_object_out_of_scene' : take_object_out_of_scene,
+    'get_new_object' : partial(put_object_in_scene, must_put_in_locker=False),
+    'put_new_object_in_locker' : partial(put_object_in_scene, must_put_in_locker=True),
+    'take_object_out_of_scene' : take_object_out_of_scene,
 }
 
 #get the path for saving the files
@@ -770,3 +788,5 @@ render_and_end()
 with open(os.path.join(folder, 'actions.csv'), 'w', newline='') as f:
     writer = csv.writer(f)
     writer.writerows(moves)
+
+print("Written actions file!")
