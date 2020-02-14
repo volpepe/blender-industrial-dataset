@@ -1,5 +1,0 @@
-arm exited from scene
-arm moved in front of object <bpy_struct, Object("Cube.008")>
-arm grabbed object <bpy_struct, Object("Cube.008")>
-arm entered in scene holding <bpy_struct, Object("Cube.008")>
-arm moved back to original position

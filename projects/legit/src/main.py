@@ -125,77 +125,47 @@ doors = {
     'door_13' : bpy.data.objects["Door_13"],
 }
 
+def format_objs(obj, typ):
+    for key, val in objects.get(typ).items():
+        if obj == val:
+            return key
+    return None
+
+def format_lockers(locker_num):
+    return "locker_" + str(locker_num)
+
+def format_doors(locker_num):
+    return "door_" + str(locker_num)
+
 #False = closed, True = open
 door_open = [False] * len(doors.keys())
 
 brightness_levels = [x for x in range(2000, 60000, 1000)]
 
-object_table = [
-    ["id", "type", "color", "size"],
-    ["cone_0", "cone", "orange", "small"],
-    ["cone_1", "cone", "blue", "small"],
-    ["cone_2", "cone", "orange", "medium"],
-    ["cube_0", "cube", "blue", "small"],
-    ["cube_1", "cube", "green", "medium"],
-    ["cube_2", "cube", "very_small", "pink"],
-    ["cube_3", "cube", "very_small", "orange"],
-    ["cube_4", "cube", "big", "light_blue"],
-    ["cube_5", "cube", "very_small", "purple"],
-    ["cube_6", "cube", "small", "green"],
-    ["cube_7", "cube", "big", "green"],
-    ["cube_8", "cube", "medium", "pink"],
-    ["cube_8", "cube", "medium", "pink"],
-    ["cylinder_0", "cylinder", "medium", "pink"],
-    ["cylinder_1", "cylinder", "big", "dark_grey"],
-    ["sphere_0", "sphere", "big", "yellow"],
-    ["sphere_1", "sphere", "big", "light_blue"],
-    ["sphere_2", "sphere", "very_small", "orange"],
-    ["sphere_3", "sphere", "small", "pink"],
-    ["sphere_4", "sphere", "very_small", "yellow"],
-    ["sphere_5", "sphere", "big", "green"],
-    ["arm", "arm", "big", "dark_grey"],
-    ["arm_color", "arm", "big", "blue"],
-    ["arm_copy", "arm", "big", "dark_grey"],
-    ["door_0", "door", "big", "violet"],
-    ["door_1", "door", "big", "blue"],
-    ["door_2", "door", "big", "beige"],
-    ["door_3", "door", "very_big", "violet"],
-    ["door_4", "door", "very_big", "green"],
-    ["door_5", "door", "big", "brown"],
-    ["door_6", "door", "big", "purple"],
-    ["door_7", "door", "big", "black"],
-    ["door_8", "door", "big", "green"],
-    ["door_9", "door", "big", "red"],
-    ["door_10", "door", "big", "grey"],
-    ["door_11", "door", "big", "violet"],
-    ["door_12", "door", "big", "blue"],
-    ["door_13", "door", "big", "green"],
-]
-
 phrase_structure = ["who", "doesWhat", "toWhom", "whereAdverb", "where", "whileDoingWhat", "whileToWhom"]
 
 actions = {
-    'arm_to_open_locker': "arm moved to open locker {}",
-    'arm_to_closed_locker': "arm moved to closed locker {}",
-    'arm_to_object': "arm moved in front of object {}",
-    'arm_open_door': "arm opened door {}",
-    'arm_close_door': "arm closed door {}",
-    'arm_into_locker': "arm moved into locker {}",
-    'arm_out_locker': "arm moved out of locker {}",
-    'arm_grab_object': 'arm grabbed object {}',
-    'arm_out_locker_w_object': "arm moved out of locker {} holding object {}",
-    'arm_to_closed_locker_w_object': "arm moved to closed locker {} holding object {}",
-    'arm_to_open_locker_w_object': "arm moved to open locker {} holding object {}",
-    'arm_to_object_w_object': "arm moved in front of object {} holding object {}",
-    'arm_position_object_in_locker': "arm positioned object {} in locker {}",
-    'arm_to_origin': "arm moved back to original position",
-    'arm_exit_scene' : "arm exited from scene",
-    "arm_in_scene" : "arm entered in scene",
-    "arm_in_scene_w_object" : "arm entered in scene holding {}",
-    "arm_to_ground" : "arm put object {} on the ground",
-    "arm_exit_scene_w_object" : "arm exited from scene holding {}",
+    'arm_to_locker': lambda arm, locker, null : [arm, "moved", "itself", "to", locker, "", ""],
+    'arm_to_object': lambda arm, obj, null : [arm, "moved", "itself", "in front of", obj, "", ""],
+    'arm_open_door': lambda arm, door, null : [arm, "opened", door, "", "", "", ""],
+    'arm_close_door': lambda arm, door, null : [arm, "closed", door, "", "", "", ""],
+    'arm_into_locker': lambda arm, locker, null: [arm, "moved", "itself", "into", locker, "", ""],
+    'arm_out_locker': lambda arm, locker, null: [arm, "moved", "itself", "out of", locker, "", ""],
+    'arm_grab_object': lambda arm, obj, null: [arm, "grabbed", obj, "", "", "", ""],
+    'arm_out_locker_w_object': lambda arm, locker, obj: [arm, "moved", "itself", "out of", locker, "holding", obj],
+    'arm_to_locker_w_object': lambda arm, locker, obj: [arm, "moved", "itself", "in front of", locker, "holding", obj],
+    'arm_to_object_w_object': lambda arm, obj_1, obj_2: [arm, "moved", "itself", "in front of", obj_1, "holding", obj_2],
+    'arm_position_object_in_locker': lambda arm, obj, locker: [arm, "positioned", obj, "into", locker, "", ""],
+    'arm_to_origin': lambda arm, null, null_2: [arm, "moved", "itself", "to", "original position", "", ""],
+    'arm_exit_scene' : lambda arm, null, null_2: [arm, "moved", "itself", "out of", "scene", "", ""],
+    "arm_in_scene" : lambda arm, null, null_2: [arm, "moved", "itself", "into", "scene", "", ""],
+    "arm_in_scene_w_object" : lambda arm, obj, null: [arm, "moved", "itself", "into", "scene", "holding", obj],
+    "arm_to_ground" : lambda arm, obj, null: [arm, "put", obj, "on", "the ground", "", ""],
+    "arm_exit_scene_w_object" : lambda arm, obj, null: [arm, "moved", "itself", "out of", "scene", "holding", obj],
 }
 
+def action_builder(action, var_1=None, var_2=None, var_3=None):
+    return actions.get(action)(var_1, var_2, var_3)
 
 ###################################################################
 
@@ -360,7 +330,7 @@ def open_locker(arm, door, locker_num):
 
 def move_sphere_to_locker():
 
-    moves = []
+    moves = [phrase_structure]
 
     #select a random sphere in a locker
     sphere = select_random_object(choices=["spheres"], locations=[x for x in object_locations.keys() if x not in ["ground_in", "ground_out"]])
@@ -387,6 +357,11 @@ def move_sphere_to_locker():
 
     door = doors['door_' + str(locker_num)]
 
+    format_arm = format_objs(arm, 'robots')
+    format_sphere = format_objs(sphere, 'spheres')
+    format_locker = format_lockers(locker_num)
+    format_door = format_doors(locker_num)
+
     #approach its locker (1 sec)
     #get the locker location
     handle_0 = get_handle_location_for_object(sphere)
@@ -397,27 +372,29 @@ def move_sphere_to_locker():
     arm.location = handle_0
     set_keyframe_for_objects([arm, door, sphere])
     set_keyframe_for_objects([door], data_path="rotation_euler")
-    moves.append(actions["arm_to_closed_locker"].format(str(locker_num)))
+    moves.append(action_builder("arm_to_locker", format_arm, format_locker))
     
     #open the locker (1 secs)
     current_frame = advance_frame(current_frame)
-    open_locker()
-    moves.append(actions["arm_open_door"].format(str(locker_num)))
+    open_locker(arm, door, locker_num)
+    moves.append(action_builder("arm_open_door", format_arm, format_door))
 
     #select a random object in another locker
     locker_num_2, door_2 = get_random_locker_num_and_door(exceptions=[int(locker_num)], nonempty=False)
+    format_locker_2 = format_lockers(locker_num_2)
+    format_door_2 = format_doors(locker_num_2)
 
     #approach the second locker (1 sec)
     current_frame = advance_frame(current_frame)
     arm.location = get_handle_location_for_door(door_2, locker_num_2)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door_2], data_path="rotation_euler")
-    moves.append(actions["arm_to_closed_locker"].format(str(locker_num_2)))
+    moves.append(action_builder("arm_to_locker", format_arm, format_locker_2))
 
     #open the second locker (1 sec)
     current_frame = advance_frame(current_frame)
     open_locker(arm, door_2, locker_num_2)
-    moves.append(actions["arm_open_door"].format(str(locker_num_2)))
+    moves.append(action_builder("arm_open_door", format_arm, format_door_2))
 
     #get in front of the object of the first locker (1 sec)
     #move in y and z
@@ -426,8 +403,8 @@ def move_sphere_to_locker():
     #apply correction for z axis to get on top of the object
     arm.location[2] = sphere.location[2] + (sphere.dimensions[2] / 2)
     set_keyframe_for_objects([arm])
-    moves.append(actions["arm_to_open_locker"].format(str(locker_num)))
-    moves.append(actions["arm_to_object"].format(str(sphere)))
+    moves.append(action_builder("arm_to_locker", format_arm, format_locker))
+    moves.append(action_builder("arm_to_object", format_arm, format_sphere))
 
     #get item (1 sec)
     #move in x
@@ -435,14 +412,14 @@ def move_sphere_to_locker():
     placeholder = arm.location[0]
     arm.location[0] = sphere.location[0]
     set_keyframe_for_objects([arm, sphere])
-    moves.append(actions["arm_into_locker"].format(str(locker_num)))
-    moves.append(actions["arm_grab_object"].format(str(sphere)))
+    moves.append(action_builder("arm_into_locker", format_arm, format_locker))
+    moves.append(action_builder("arm_grab_object", format_arm, format_sphere))
 
     #get out with item (1 sec)
     current_frame = advance_frame(current_frame)
     arm.location[0] = sphere.location[0] = placeholder
     set_keyframe_for_objects([arm, sphere])
-    moves.append(actions["arm_out_locker_w_object"].format(str(locker_num), str(sphere)))
+    moves.append(action_builder("arm_out_locker_w_object", format_arm, format_locker, format_sphere))
 
     #take the item to second locker (1 sec)
     #first move in y and z to second locker
@@ -458,8 +435,7 @@ def move_sphere_to_locker():
     sphere.location[2] = correct_z
     arm.location[2] = correct_z + sphere.dimensions[2] / 2
     set_keyframe_for_objects([arm, sphere])
-    moves.append(actions["arm_to_open_locker_w_object"].format(str(locker_num_2), str(sphere)))
-
+    moves.append(action_builder("arm_to_locker_w_object", format_arm, format_locker_2, format_sphere))
 
     #put it in(1 sec)
     #move in x
@@ -467,13 +443,13 @@ def move_sphere_to_locker():
     placeholder = arm.location[0]
     arm.location[0] = sphere.location[0] = correct_x
     set_keyframe_for_objects([arm, sphere])
-    moves.append(actions["arm_position_object_in_locker"].format(str(sphere), str(locker_num_2)))
+    moves.append(action_builder("arm_position_object_in_locker", format_arm, format_sphere, format_locker_2))
 
     #get out (1 sec)
     current_frame = advance_frame(current_frame)
     arm.location[0] = placeholder
     set_keyframe_for_objects([arm])
-    moves.append(actions["arm_out_locker"].format(str(locker_num_2)))
+    moves.append(action_builder("arm_out_locker", format_arm, format_locker_2))
 
     #close lockers (4 secs)
     #get to handle
@@ -485,25 +461,25 @@ def move_sphere_to_locker():
     #close door
     current_frame = advance_frame(current_frame)
     close_door(arm, door_2, locker_num_2)
-    moves.append(actions["arm_close_door"].format(str(locker_num_2)))
+    moves.append(action_builder("arm_close_door", format_arm, format_door_2))
 
     #get to handle
     current_frame = advance_frame(current_frame)
     arm.location = get_handle_location_for_door(door, locker_num)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door], data_path="rotation_euler")
-    moves.append(actions["arm_to_open_locker"].format(str(locker_num)))
+    moves.append(action_builder("arm_to_locker", format_arm, format_locker))
 
     #close door
     current_frame = advance_frame(current_frame)
-    close_door()
-    moves.append(actions["arm_close_door"].format(str(locker_num)))
+    close_door(arm, door, locker_num)
+    moves.append(action_builder("arm_close_door", format_arm, format_door))
 
     ###14 SECONDS: get back to original position in 1 second
     current_frame = advance_frame(current_frame)
     return_to_origin(arm, starting_location)
-    moves.append(actions["arm_to_origin"])
-
+    moves.append(action_builder("arm_to_origin", format_arm))
+    
     return moves
 
 def put_object_in_scene(must_put_in_locker=False):
@@ -757,10 +733,10 @@ def take_object_out_of_scene():
 ###################################################################
 
 activities = {
-    #'move_sphere_to_other_locker' : move_sphere_to_locker,
+    'move_sphere_to_other_locker' : move_sphere_to_locker,
     #'get_new_object' : partial(put_object_in_scene, must_put_in_locker=False),
     #'put_new_object_in_locker' : partial(put_object_in_scene, must_put_in_locker=True),
-    'take_object_out_of_scene' : take_object_out_of_scene,
+    #'take_object_out_of_scene' : take_object_out_of_scene,
 }
 
 #get the path for saving the files
@@ -791,6 +767,6 @@ for obj in get_all_objects(exceptions=["lights", "cameras"]):
 render_and_end()
 
 #create actions file
-with open(os.path.join(folder, 'actions.txt'), 'w+') as f:
-    for action in moves:
-        f.write("%s\n" % action)
+with open(os.path.join(folder, 'actions.csv'), 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerows(moves)
