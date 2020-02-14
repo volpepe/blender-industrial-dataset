@@ -331,6 +331,33 @@ def get_handle_location_for_door(door, locker_num):
 
 ###################################################################
 
+#basic actions
+
+def advance_frame(current_frame):
+    current_frame += render_config["fps"]
+    set_current_frame(current_frame)
+    return current_frame
+
+def close_door(arm, door, locker_num):
+    door.rotation_euler[2] = radians(0)
+    door_open[int(locker_num)] = False
+    arm.location = get_handle_location_for_door(door, locker_num)
+    set_keyframe_for_objects([arm])
+    set_keyframe_for_objects([door], data_path="rotation_euler")
+
+def return_to_origin(arm, starting_location):
+    arm.location = starting_location
+    set_keyframe_for_objects([arm])
+
+def open_locker(arm, door, locker_num):
+    #radians operations are required for rotations
+    door.rotation_euler[2] = radians(-90)
+    door_open[int(locker_num)] = True
+    arm.location = get_handle_location_for_door(door, locker_num)
+    set_keyframe_for_objects([arm])
+    set_keyframe_for_objects([door], data_path="rotation_euler")
+
+
 def move_sphere_to_locker():
 
     moves = []
@@ -366,49 +393,35 @@ def move_sphere_to_locker():
     if handle_0 is None:
         return None #nothing happens
     #move arm to locker
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location = handle_0
     set_keyframe_for_objects([arm, door, sphere])
     set_keyframe_for_objects([door], data_path="rotation_euler")
     moves.append(actions["arm_to_closed_locker"].format(str(locker_num)))
     
     #open the locker (1 secs)
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
-    #radians operations are required for rotations
-    door.rotation_euler[2] = radians(-90)
-    door_open[int(locker_num)] = True
-    arm.location = get_handle_location_for_object(sphere)
-    set_keyframe_for_objects([arm])
-    set_keyframe_for_objects([door], data_path="rotation_euler")
+    current_frame = advance_frame(current_frame)
+    open_locker()
     moves.append(actions["arm_open_door"].format(str(locker_num)))
 
     #select a random object in another locker
     locker_num_2, door_2 = get_random_locker_num_and_door(exceptions=[int(locker_num)], nonempty=False)
 
     #approach the second locker (1 sec)
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location = get_handle_location_for_door(door_2, locker_num_2)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door_2], data_path="rotation_euler")
     moves.append(actions["arm_to_closed_locker"].format(str(locker_num_2)))
 
     #open the second locker (1 sec)
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
-    door_2.rotation_euler[2] = radians(-90)
-    door_open[int(locker_num_2)] = True
-    arm.location = get_handle_location_for_door(door_2, locker_num_2)
-    set_keyframe_for_objects([arm])
-    set_keyframe_for_objects([door_2], data_path="rotation_euler")
+    current_frame = advance_frame(current_frame)
+    open_locker(arm, door_2, locker_num_2)
     moves.append(actions["arm_open_door"].format(str(locker_num_2)))
 
     #get in front of the object of the first locker (1 sec)
     #move in y and z
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location[1] = sphere.location[1]
     #apply correction for z axis to get on top of the object
     arm.location[2] = sphere.location[2] + (sphere.dimensions[2] / 2)
@@ -418,8 +431,7 @@ def move_sphere_to_locker():
 
     #get item (1 sec)
     #move in x
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     placeholder = arm.location[0]
     arm.location[0] = sphere.location[0]
     set_keyframe_for_objects([arm, sphere])
@@ -427,16 +439,14 @@ def move_sphere_to_locker():
     moves.append(actions["arm_grab_object"].format(str(sphere)))
 
     #get out with item (1 sec)
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location[0] = sphere.location[0] = placeholder
     set_keyframe_for_objects([arm, sphere])
     moves.append(actions["arm_out_locker_w_object"].format(str(locker_num), str(sphere)))
 
     #take the item to second locker (1 sec)
     #first move in y and z to second locker
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     #x and y are random within the locker boundaries
     positioning_x, positioning_y = get_random_x_and_y_within_locker(door_2)
     correct_x = door_2.location[0] - positioning_x
@@ -453,61 +463,45 @@ def move_sphere_to_locker():
 
     #put it in(1 sec)
     #move in x
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     placeholder = arm.location[0]
     arm.location[0] = sphere.location[0] = correct_x
     set_keyframe_for_objects([arm, sphere])
     moves.append(actions["arm_position_object_in_locker"].format(str(sphere), str(locker_num_2)))
 
     #get out (1 sec)
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location[0] = placeholder
     set_keyframe_for_objects([arm])
     moves.append(actions["arm_out_locker"].format(str(locker_num_2)))
 
     #close lockers (4 secs)
     #get to handle
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location = get_handle_location_for_door(door_2, locker_num_2)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door_2], data_path="rotation_euler")
 
     #close door
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
-    door_2.rotation_euler[2] = radians(0)
-    door_open[int(locker_num_2)] = False
-    arm.location = get_handle_location_for_door(door_2, locker_num_2)
-    set_keyframe_for_objects([arm])
-    set_keyframe_for_objects([door_2], data_path="rotation_euler")
+    current_frame = advance_frame(current_frame)
+    close_door(arm, door_2, locker_num_2)
     moves.append(actions["arm_close_door"].format(str(locker_num_2)))
 
     #get to handle
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location = get_handle_location_for_door(door, locker_num)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door], data_path="rotation_euler")
     moves.append(actions["arm_to_open_locker"].format(str(locker_num)))
 
     #close door
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
-    door.rotation_euler[2] = radians(0)
-    door_open[int(locker_num)] = False
-    arm.location = get_handle_location_for_door(door, locker_num)
-    set_keyframe_for_objects([arm])
-    set_keyframe_for_objects([door], data_path="rotation_euler")
+    current_frame = advance_frame(current_frame)
+    close_door()
     moves.append(actions["arm_close_door"].format(str(locker_num)))
 
     ###14 SECONDS: get back to original position in 1 second
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
-    arm.location = starting_location
-    set_keyframe_for_objects([arm])
+    current_frame = advance_frame(current_frame)
+    return_to_origin(arm, starting_location)
     moves.append(actions["arm_to_origin"])
 
     return moves
@@ -537,8 +531,7 @@ def put_object_in_scene(must_put_in_locker=False):
     set_keyframe_for_objects([arm, grabbed])
 
     #go take the grabbed object (1 sec)
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location[0] = grabbed.location[0]
     arm.location[1] = grabbed.location[1]
     #apply correction for z axis to get on top of the object
@@ -552,8 +545,7 @@ def put_object_in_scene(must_put_in_locker=False):
     ##put in on the ground and stay still?
     ##put it in a locker
     #until decision is made, leave object on the ground
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     x, y = select_random_coordinates_on_visible_ground()
     arm.location[0] = grabbed.location[0] = x
     arm.location[1] = grabbed.location[1] = y
@@ -561,8 +553,7 @@ def put_object_in_scene(must_put_in_locker=False):
     moves.append(actions["arm_in_scene_w_object"].format(str(grabbed)))
 
     #rest for a second 
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     set_keyframe_for_objects([arm, grabbed])
 
     if must_put_in_locker:
@@ -570,8 +561,7 @@ def put_object_in_scene(must_put_in_locker=False):
         locker_num, door = get_random_locker_num_and_door()
 
         #move arm to the handle
-        current_frame += render_config["fps"]
-        set_current_frame(current_frame)
+        current_frame = advance_frame(current_frame)
         arm.location = get_handle_location_for_door(door, locker_num)
         set_keyframe_for_objects([arm])
         moves.append(actions["arm_to_closed_locker"].format(str(locker_num)))
@@ -580,19 +570,12 @@ def put_object_in_scene(must_put_in_locker=False):
         set_keyframe_for_objects([door], data_path="rotation_euler")
 
         #open locker
-        current_frame += render_config["fps"]
-        set_current_frame(current_frame)
-        #radians operations are required for rotations
-        door.rotation_euler[2] = radians(-90)
-        door_open[int(locker_num)] = True
-        arm.location = get_handle_location_for_door(door, locker_num)
-        set_keyframe_for_objects([arm])
-        set_keyframe_for_objects([door], data_path="rotation_euler")
+        current_frame = advance_frame(current_frame)
+        open_locker(arm, door, locker_num)
         moves.append(actions["arm_open_door"].format(str(locker_num)))
 
         #get back to object
-        current_frame += render_config["fps"]
-        set_current_frame(current_frame)
+        current_frame = advance_frame(current_frame)
         arm.location[0] = grabbed.location[0]
         arm.location[1] = grabbed.location[1]
         #apply correction for z axis to get on top of the object
@@ -603,8 +586,7 @@ def put_object_in_scene(must_put_in_locker=False):
 
         #put object in locker
         #first move in y and z to locker
-        current_frame += render_config["fps"]
-        set_current_frame(current_frame)
+        current_frame = advance_frame(current_frame)
         #x and y are random within the locker boundaries
         positioning_x, positioning_y = get_random_x_and_y_within_locker(door)
         correct_x = door.location[0] - positioning_x
@@ -620,43 +602,33 @@ def put_object_in_scene(must_put_in_locker=False):
 
         #put it in(1 sec)
         #move in x
-        current_frame += render_config["fps"]
-        set_current_frame(current_frame)
+        current_frame = advance_frame(current_frame)
         placeholder = arm.location[0]
         arm.location[0] = grabbed.location[0] = correct_x
         set_keyframe_for_objects([arm, grabbed])
         moves.append(actions["arm_position_object_in_locker"].format(str(grabbed), str(locker_num)))
 
         #get out (1 sec)
-        current_frame += render_config["fps"]
-        set_current_frame(current_frame)
+        current_frame = advance_frame(current_frame)
         arm.location[0] = placeholder
         set_keyframe_for_objects([arm])
         moves.append(actions["arm_out_locker"].format(str(locker_num)))
 
         #close lockers
         #get to handle
-        current_frame += render_config["fps"]
-        set_current_frame(current_frame)
+        current_frame = advance_frame(current_frame)
         arm.location = get_handle_location_for_door(door, locker_num)
         set_keyframe_for_objects([arm])
         set_keyframe_for_objects([door], data_path="rotation_euler")
 
         #close door
-        current_frame += render_config["fps"]
-        set_current_frame(current_frame)
-        door.rotation_euler[2] = radians(0)
-        door_open[int(locker_num)] = False
-        arm.location = get_handle_location_for_door(door, locker_num)
-        set_keyframe_for_objects([arm])
-        set_keyframe_for_objects([door], data_path="rotation_euler")
+        current_frame = advance_frame(current_frame)
+        close_door(arm, door, locker_num)
         moves.append(actions["arm_close_door"].format(str(locker_num)))
 
     #return to origin
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
-    arm.location = starting_location
-    set_keyframe_for_objects([arm])
+    current_frame = advance_frame(current_frame)
+    return_to_origin(arm, starting_location)
     moves.append(actions["arm_to_origin"])
 
     return moves
@@ -695,28 +667,20 @@ def take_object_out_of_scene():
     if handle_0 is None:
         return None #nothing happens
     #move arm to locker
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location = handle_0
     set_keyframe_for_objects([arm, door, grabbed])
     set_keyframe_for_objects([door], data_path="rotation_euler")
     moves.append(actions["arm_to_closed_locker"].format(str(locker_num)))
     
     #open the locker (1 secs)
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
-    #radians operations are required for rotations
-    door.rotation_euler[2] = radians(-90)
-    door_open[int(locker_num)] = True
-    arm.location = get_handle_location_for_object(grabbed)
-    set_keyframe_for_objects([arm])
-    set_keyframe_for_objects([door], data_path="rotation_euler")
+    current_frame = advance_frame(current_frame)
+    open_locker(arm, door, locker_num)
     moves.append(actions["arm_open_door"].format(str(locker_num)))
 
     #get in front of the object (1 sec)
     #move in y and z
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location[1] = grabbed.location[1]
     #apply correction for z axis to get on top of the object
     arm.location[2] = grabbed.location[2] + grabbed.dimensions[2] / 2
@@ -725,8 +689,7 @@ def take_object_out_of_scene():
 
     #get item (1 sec)
     #move in x
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     placeholder = arm.location[0]
     arm.location[0] = grabbed.location[0]
     set_keyframe_for_objects([arm, grabbed])
@@ -734,15 +697,13 @@ def take_object_out_of_scene():
     moves.append(actions["arm_grab_object"].format(str(grabbed)))
 
     #get out with item (1 sec)
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location[0] = grabbed.location[0] = placeholder
     set_keyframe_for_objects([arm, grabbed])
     moves.append(actions["arm_out_locker_w_object"].format(str(locker_num), str(grabbed)))
 
     #put item on ground
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     x, y = select_random_coordinates_on_visible_ground()
     arm.location[0] = grabbed.location[0] = x
     arm.location[1] = grabbed.location[1] = y
@@ -752,26 +713,19 @@ def take_object_out_of_scene():
     moves.append(actions["arm_to_ground"].format(str(grabbed)))
 
     #come back and close door
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location = get_handle_location_for_door(door, locker_num)
     set_keyframe_for_objects([arm])
     set_keyframe_for_objects([door], data_path="rotation_euler")
     moves.append(actions["arm_to_open_locker"].format(str(locker_num)))
 
     #close door
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
-    door.rotation_euler[2] = radians(0)
-    door_open[int(locker_num)] = False
-    arm.location = get_handle_location_for_door(door, locker_num)
-    set_keyframe_for_objects([arm])
-    set_keyframe_for_objects([door], data_path="rotation_euler")
+    current_frame = advance_frame(current_frame)
+    close_door(arm, door, locker_num)
     moves.append(actions["arm_close_door"].format(str(locker_num)))
 
     #get back to the object
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location[0] = grabbed.location[0]
     arm.location[1] = grabbed.location[1]
     #apply correction for z axis to get on top of the object
@@ -781,25 +735,21 @@ def take_object_out_of_scene():
     set_keyframe_for_objects([arm, grabbed])
 
     #rest for a second
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     set_keyframe_for_objects([arm, grabbed])
 
     #randomly choose where to put the object
     x, y = select_random_coordinates_on_visible_ground()
     x += 7 #move to invisible ground
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
+    current_frame = advance_frame(current_frame)
     arm.location[0] = grabbed.location[0] = x
     arm.location[1] = grabbed.location[1] = y
     set_keyframe_for_objects([arm, grabbed])
     moves.append(actions["arm_exit_scene_w_object"].format(str(grabbed)))
 
     #return to origin
-    current_frame += render_config["fps"]
-    set_current_frame(current_frame)
-    arm.location = starting_location
-    set_keyframe_for_objects([arm])
+    current_frame = advance_frame(current_frame)
+    return_to_origin(arm, starting_location)
     moves.append(actions["arm_to_origin"])
 
     return moves
