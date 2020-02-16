@@ -7,6 +7,7 @@ from math import radians
 import sys
 from functools import partial
 import csv
+import argparse
 
 render_config = {
     "fps": 12
@@ -811,9 +812,16 @@ activities = {
 }
 
 #get the path for saving the files
-argv = sys.argv
-argv = argv[argv.index("--") + 1:]  # get all args after "--"
+argv = sys.argv[sys.argv.index("--") + 1:]  # get all args after "--"
 out_path = argv[0]
+
+#get additional optional arguments
+parser = argparse.ArgumentParser(
+    description = 'Run blender in background mode',
+    prog = "blender -b dataset_stem.blend -P "+__file__+" -- out_path",
+)
+parser.add_argument('--activity', '-a', type=str)
+args = parser.parse_args(argv[1:])
 
 #set a random luminosity for the scene
 set_random_luminosity(objects["lights"]["light_0"])
@@ -822,7 +830,14 @@ set_random_luminosity(objects["lights"]["light_0"])
 random_rotate_camera(objects["cameras"]["camera_0"]) 
 
 #choose an activity and execute it
-random_activity = choose_activity()
+if args.activity:
+    try:
+        random_activity = args.activity
+        print("Chosen " + str(args.activity) + " activity")
+    except:
+        print(str(args.activity) + " is not a correct activity")
+else:
+    random_activity = choose_activity()
 moves = activities[random_activity]()
 
 #set filepath
