@@ -816,6 +816,9 @@ def open_three_doors():
 
     #return to original position
     return_to_origin(arm, starting_location)
+    moves.append(action_builder("arm_to_origin", format_arm))
+
+    return moves
 
 ###################################################################
 
