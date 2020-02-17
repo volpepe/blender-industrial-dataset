@@ -172,8 +172,8 @@ actions = {
     "arm_drop_object" : lambda arm, dropped, null, start, end : [arm, "dropped", dropped, "on", "the ground", "", "", start, end]
 }
 
-def action_builder(action, start, var_1=None, var_2=None, var_3=None, duration=1):
-    return actions.get(action)(var_1, var_2, var_3, start, int(start) + int(render_config["fps"]) * int(duration))
+def action_builder(action, end, var_1=None, var_2=None, var_3=None, duration=1):
+    return actions.get(action)(var_1, var_2, var_3, int(end) - int(render_config["fps"]) * int(duration), end)
 
 ###################################################################
 
@@ -339,7 +339,6 @@ def move_to_locker_and_open(arm, door, locker, format_arm, format_locker, format
     #get to door 1
     current_frame = advance_frame(current_frame)
     arm.location = get_handle_location_for_door(door, locker)
-    moves.append(action_builder("arm_to_locker", current_frame, format_arm, format_locker))
     set_keyframe_for_objects([arm, door])
     set_keyframe_for_objects([door], data_path="rotation_euler")
     moves.append(action_builder("arm_to_locker", current_frame, format_arm, format_locker))
@@ -811,6 +810,7 @@ def open_three_doors():
         set_keyframe_for_objects([arm])
 
     #return to original position
+    current_frame = advance_frame(current_frame)
     return_to_origin(arm, starting_location)
     moves.append(action_builder("arm_to_origin", current_frame, format_arm))
 
