@@ -8,6 +8,7 @@ import sys
 from functools import partial
 import csv
 import argparse
+import time
 
 render_config = {
     "fps": 12
@@ -1009,8 +1010,16 @@ else:
     random_activity = choose_activity()
 moves = activities[random_activity]()
 
+folder = ''
 #set filepath
-folder = os.path.join(out_path, random_activity, datetime.now().strftime("%d%m%Y_%H%M%S"))
+while True:
+    folder = os.path.join(out_path, random_activity, datetime.now().strftime("%d%m%Y_%H%M%S"))
+    #if folder doesn't exist, create it and start rendering, else retry in a second to avoid problems
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+        break
+    else:
+        time.sleep(1)
 bpy.context.scene.render.filepath = os.path.join(folder, "frame")
 
 #bake physics
