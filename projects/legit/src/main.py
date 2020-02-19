@@ -423,7 +423,7 @@ def setup_taking_object(moves):
     arm.location[0] = grabbed.location[0]
     set_keyframe_for_objects([arm, grabbed])
     moves.append(action_builder("arm_into_locker", current_frame, format_arm, format_locker))
-    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab))
+    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab, duration=0))
 
     #get out with item (1 sec)
     current_frame = advance_frame(current_frame)
@@ -545,7 +545,7 @@ def move_sphere_to_other_locker():
     arm.location[0] = sphere.location[0]
     set_keyframe_for_objects([arm, sphere])
     moves.append(action_builder("arm_into_locker", current_frame, format_arm, format_locker))
-    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_sphere))
+    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_sphere, duration=0))
 
     #get out with item (1 sec)
     current_frame = advance_frame(current_frame)
@@ -647,7 +647,7 @@ def put_object_in_scene(must_put_in_locker=False):
         #apply correction for z axis to get on top of the object
         arm.location[2] = grabbed.location[2] + grabbed.dimensions[2] / 2
         moves.append(action_builder("arm_to_object", current_frame, format_arm, format_grab))
-        moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab))
+        moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab, duration=0))
         set_keyframe_for_objects([arm, grabbed])
 
         #get some distance from the locker
@@ -702,7 +702,7 @@ def take_object_out_of_scene():
     #apply correction for z axis to get on top of the object
     arm.location[2] = grabbed.location[2] + (grabbed.dimensions[2] / 2)
     moves.append(action_builder("arm_to_object", current_frame, format_arm, format_grab))
-    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab))
+    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab, duration=0))
     set_keyframe_for_objects([arm, grabbed])
 
     #rest for a second
@@ -766,7 +766,7 @@ def take_object_drop_and_replace():
     arm.location[2] = grabbed_2.location[2] + (grabbed_2.dimensions[2] / 2)
     set_keyframe_for_objects([arm, grabbed_2])
     moves.append(action_builder("arm_to_object", current_frame, format_arm, format_grab))
-    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab))
+    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab, duration=0))
 
     #rest for half a second 
     current_frame = advance_frame(current_frame - 6)
