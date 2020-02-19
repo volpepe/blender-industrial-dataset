@@ -748,12 +748,16 @@ def take_object_drop_and_replace():
     moves.append(action_builder("arm_to_object", current_frame, format_arm, format_grab))
     moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab))
 
+    #rest for half a second 
+    current_frame = advance_frame(current_frame - 6)
+    set_keyframe_for_objects([arm, grabbed_2])
+
     #put object in locker and close the door
     current_frame, moves = position_item_to_locker_then_close(arm, \
             grabbed_2, door, locker_num, format_arm, format_grab_2, format_locker, format_door, current_frame, moves)
 
-    #rest for a second 
-    current_frame = advance_frame(current_frame)
+    #rest for half a second 
+    current_frame = advance_frame(current_frame - 6)
     set_keyframe_for_objects([arm, grabbed_2])
 
     #return to origin
