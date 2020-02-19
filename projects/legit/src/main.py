@@ -249,7 +249,7 @@ def select_random_coordinates_on_visible_ground():
 
 def random_select_rotate_arm():
     #select main arm and store its position
-    arm = objects["robots"]["arm"]
+    arm = random_select_rotate_arm()
     starting_position = Vector(arm.location)
     
     #select a random arm and swap the two arm locations
@@ -379,7 +379,7 @@ def setup_taking_object(moves):
     enable_collisions(get_all_objects(exceptions=["lights", "cameras"]))
 
     #get reference to the arm
-    arm = objects["robots"]["arm"]
+    arm = random_select_rotate_arm()
     starting_location = [x for x in arm.location]
 
     #let the arm be controlled by the animation
@@ -482,37 +482,37 @@ def position_item_to_locker_then_close(arm, grabbed, door, locker_num, format_ar
 
 ########### ACTIVITIES ################
 
-def move_sphere_to_other_locker():
+def move_obj_to_other_locker(obj_type):
 
     moves = [phrase_structure]
 
-    #select a random sphere in a locker
-    sphere = select_random_object(choices=["spheres"], locations=[x for x in object_locations.keys() if x not in ["ground_in", "ground_out"]])
-    print("Selected " + str(sphere))
+    #select a random obj in a locker
+    obj = select_random_object(choices=[obj_type], locations=[x for x in object_locations.keys() if x not in ["ground_in", "ground_out"]])
+    print("Selected " + str(obj))
 
     #enable all collisions
     enable_collisions(get_all_objects(exceptions=["lights", "cameras"]))
 
     #get reference to the arm
-    arm = objects["robots"]["arm"]
+    arm = random_select_rotate_arm()
     starting_location = [x for x in arm.location]
 
     #let the arm be controlled by the animation
     arm.rigid_body.kinematic = True
-    #temporarily disable rigid_body physics for the sphere
-    sphere.rigid_body.kinematic = True
+    #temporarily disable rigid_body physics for the obj
+    obj.rigid_body.kinematic = True
 
-    #set the first keyframe for the arm, the sphere and the locker door
+    #set the first keyframe for the arm, the obj and the locker door
     current_frame = 0
     set_current_frame(current_frame)
-    set_keyframe_for_objects([arm, sphere])
+    set_keyframe_for_objects([arm, obj])
 
-    locker_num = get_locker_loc_for_object(sphere).split("_")[1]
+    locker_num = get_locker_loc_for_object(obj).split("_")[1]
 
     door = doors['door_' + str(locker_num)]
 
     format_arm = format_objs(arm, 'robots')
-    format_sphere = format_objs(sphere, 'spheres')
+    format_obj = format_objs(obj)
     format_locker = format_lockers(locker_num)
     format_door = format_doors(locker_num)
 
@@ -531,31 +531,31 @@ def move_sphere_to_other_locker():
     #get in front of the object of the first locker (1 sec)
     #move in y and z
     current_frame = advance_frame(current_frame)
-    arm.location[1] = sphere.location[1]
+    arm.location[1] = obj.location[1]
     #apply correction for z axis to get on top of the object
-    arm.location[2] = sphere.location[2] + (sphere.dimensions[2] / 2)
+    arm.location[2] = obj.location[2] + (obj.dimensions[2] / 2)
     set_keyframe_for_objects([arm])
     moves.append(action_builder("arm_to_locker", current_frame, format_arm, format_locker))
-    moves.append(action_builder("arm_to_object", current_frame, format_arm, format_sphere))
+    moves.append(action_builder("arm_to_object", current_frame, format_arm, format_obj))
 
     #get item (1 sec)
     #move in x
     current_frame = advance_frame(current_frame)
     placeholder = arm.location[0]
-    arm.location[0] = sphere.location[0]
-    set_keyframe_for_objects([arm, sphere])
+    arm.location[0] = obj.location[0]
+    set_keyframe_for_objects([arm, obj])
     moves.append(action_builder("arm_into_locker", current_frame, format_arm, format_locker))
-    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_sphere, duration=0))
+    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_obj, duration=0))
 
     #get out with item (1 sec)
     current_frame = advance_frame(current_frame)
-    arm.location[0] = sphere.location[0] = placeholder + sphere.dimensions[0]
-    set_keyframe_for_objects([arm, sphere])
-    moves.append(action_builder("arm_out_locker_w_object", current_frame, format_arm, format_locker, format_sphere))
+    arm.location[0] = obj.location[0] = placeholder + obj.dimensions[0]
+    set_keyframe_for_objects([arm, obj])
+    moves.append(action_builder("arm_out_locker_w_object", current_frame, format_arm, format_locker, format_obj))
 
     #bring it to second locker, put it in and close door
     current_frame, moves = position_item_to_locker_then_close(arm, \
-            sphere, door_2, locker_num_2, format_arm, format_sphere, format_locker_2, format_door_2, current_frame, moves)
+            obj, door_2, locker_num_2, format_arm, format_obj, format_locker_2, format_door_2, current_frame, moves)
 
     #get to handle
     current_frame = advance_frame(current_frame)
@@ -587,7 +587,7 @@ def put_object_in_scene(must_put_in_locker=False):
     enable_collisions(get_all_objects(exceptions=["lights", "cameras"]))
 
     #get reference to the arm
-    arm = objects["robots"]["arm"]
+    arm = random_select_rotate_arm()
     starting_location = [x for x in arm.location]
 
     #let the arm be controlled by the animation
@@ -889,13 +889,14 @@ def swap_from_ground():
 ###################################################################
 
 activities = {
-    'move_sphere_to_other_locker' : move_sphere_to_other_locker,
+    'move_sphere_to_other_locker' : partial(move_obj_to_other_locker, obj_type='spheres'),
+    'move_cube_to_other_locker' : partial(move_obj_to_other_locker, obj_type='cubes'),
     'get_new_object' : partial(put_object_in_scene, must_put_in_locker=False),
     'put_new_object_in_locker' : partial(put_object_in_scene, must_put_in_locker=True),
     'take_object_out_of_scene' : take_object_out_of_scene,
     'take_object_drop_and_replace' : take_object_drop_and_replace,
     'open_three_doors' : open_three_doors,
-    'swap_from_ground' : swap_from_ground
+    'swap_from_ground' : swap_from_ground,
 }
 
 #get the path for saving the files
