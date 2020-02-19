@@ -245,10 +245,10 @@ def random_rotate_camera(camera):
         camera.rotation_euler = Vector([x_rot, y_rot, z_rot])
 
 def select_random_coordinates_on_visible_ground():
-    x_min = 1.12
-    x_max = 2.25
-    y_min = -6.6
-    y_max = 5.55
+    x_min = 2.2875
+    x_max = 4.5
+    y_min = -3.6
+    y_max = 5.00
     return random_scaled(x_max, x_min), random_scaled(y_max, y_min)
 
 def random_select_rotate_arm():
