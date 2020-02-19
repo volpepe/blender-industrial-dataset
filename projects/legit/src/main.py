@@ -247,6 +247,26 @@ def select_random_coordinates_on_visible_ground():
     y_max = 5.55
     return random_scaled(x_max, x_min), random_scaled(y_max, y_min)
 
+def random_select_rotate_arm():
+    #select main arm and store its position
+    arm = objects["robots"]["arm"]
+    starting_position = Vector(arm.location)
+    
+    #select a random arm and swap the two arm locations
+    random_arm = select_random_object(choices=["robots"])
+    arm.location = random_arm.location
+    random_arm.location = starting_position
+
+    #randomly rotate within a certain threshold
+    random_arm.rotation_euler[0] = radians(random_scaled(70, 110))
+    random_arm.rotation_euler[1] = radians(random_scaled(57, 35))
+    if random_arm.rotation_euler[1] > 48:
+        random_arm.rotation_euler[2] = radians(random_scaled(-28, -90))
+    else:
+        random_arm.rotation_euler[2] = radians(random_scaled(-5, -40))
+
+    return random_arm
+
 ###################################################################
 
 #rendering utilities
@@ -770,6 +790,9 @@ def take_object_drop_and_replace():
 def open_three_doors():
     moves = [phrase_structure]
 
+    #randomly select and rotate arm
+    arm = random_select_rotate_arm()
+
     #select three random different lockers
     locker_1, door_1 = get_random_locker_num_and_door()
     locker_2, door_2 = get_random_locker_num_and_door(exceptions=[locker_1])
@@ -780,8 +803,7 @@ def open_three_doors():
     #enable all collisions
     enable_collisions(get_all_objects(exceptions=["lights", "cameras"]))
 
-    #get reference to the arm
-    arm = objects["robots"]["arm"]
+    #get arm starting location
     starting_location = [x for x in arm.location]
 
     #let the arm be controlled by the animation
@@ -892,7 +914,7 @@ args = parser.parse_args(argv[1:])
 set_random_luminosity(objects["lights"]["light_0"])
 
 #set a random camera rotation (within boundaries) on a 20% chance
-random_rotate_camera(objects["cameras"]["camera_0"]) 
+random_rotate_camera(objects["cameras"]["camera_0"])
 
 #choose an activity and execute it
 if args.activity:
