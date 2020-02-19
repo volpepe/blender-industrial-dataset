@@ -627,8 +627,8 @@ def put_object_in_scene(must_put_in_locker=False):
     set_keyframe_for_objects([arm, grabbed])
     moves.append(action_builder("arm_in_scene_w_object", current_frame, format_arm, format_grab))
 
-    #rest for a second 
-    current_frame = advance_frame(current_frame)
+    #rest for a random amount of time between 3 and 12 frames 
+    current_frame = advance_frame(current_frame - random_scaled(9, 0))
     set_keyframe_for_objects([arm, grabbed])
 
     if must_put_in_locker:
@@ -707,8 +707,8 @@ def take_object_out_of_scene():
     moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab, duration=0))
     set_keyframe_for_objects([arm, grabbed])
 
-    #rest for a second
-    current_frame = advance_frame(current_frame)
+    #rest for a random amount of time between 3 and 12 frames
+    current_frame = advance_frame(current_frame - random_scaled(9, 0))
     set_keyframe_for_objects([arm, grabbed])
 
     #randomly choose where to put the object
@@ -833,8 +833,8 @@ def open_three_doors():
         current_frame, moves = move_to_locker_and_open(arm, doors[i], lockers[i], format_arm, \
             arr_format_lockers[i], arr_format_doors[i], current_frame, moves)
         
-        #rest for a second
-        current_frame = advance_frame(current_frame)
+        #rest for a random amount of time between 3 and 12 frames
+        current_frame = advance_frame(current_frame - random_scaled(9, 0))
         set_keyframe_for_objects([arm])
 
     #return to original position
