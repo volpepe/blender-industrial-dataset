@@ -211,7 +211,10 @@ def get_random_locker_num_and_door(exceptions=[], nonempty=False):
                 print("Chosen door " + str(i))
                 break
             elif len(object_locations['loc_' + str(i)]) > 0:
+                print("Chosen door " + str(i))
                 break
+            else:
+                pass
     return i, doors["door_" + str(i)]
 
 def random_scaled(max, min):
@@ -249,7 +252,7 @@ def select_random_coordinates_on_visible_ground():
 
 def random_select_rotate_arm():
     #select main arm and store its position
-    arm = random_select_rotate_arm()
+    arm = objects["robots"]["arm"]
     starting_position = Vector(arm.location)
     
     #select a random arm and swap the two arm locations
@@ -408,28 +411,8 @@ def setup_taking_object(moves):
         format_locker, format_door, current_frame, moves)
 
     #get in front of the object (1 sec)
-    #move in y and z
-    current_frame = advance_frame(current_frame)
-    arm.location[1] = grabbed.location[1]
-    #apply correction for z axis to get on top of the object
-    arm.location[2] = grabbed.location[2] + grabbed.dimensions[2] / 2
-    set_keyframe_for_objects([arm])
-    moves.append(action_builder("arm_to_object", current_frame, format_arm, format_grab))
-    
-    #get item (1 sec)
-    #move in x
-    current_frame = advance_frame(current_frame)
-    placeholder = arm.location[0]
-    arm.location[0] = grabbed.location[0]
-    set_keyframe_for_objects([arm, grabbed])
-    moves.append(action_builder("arm_into_locker", current_frame, format_arm, format_locker))
-    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab, duration=0))
-
-    #get out with item (1 sec)
-    current_frame = advance_frame(current_frame)
-    arm.location[0] = grabbed.location[0] = placeholder + grabbed.dimensions[0]
-    set_keyframe_for_objects([arm, grabbed])
-    moves.append(action_builder("arm_out_locker_w_object", current_frame, format_arm, format_locker, format_grab))
+    current_frame, moves = take_obj_from_locker(current_frame, moves, arm, grabbed, \
+        format_arm, format_grab, format_locker)
 
     return arm, grabbed, locker_num, door, format_arm, format_grab, format_locker, \
         format_door, current_frame, starting_location, moves
@@ -450,7 +433,8 @@ def position_item_to_locker_then_close(arm, grabbed, door, locker_num, format_ar
     grabbed.location[2] = correct_z
     arm.location[2] = correct_z + grabbed.dimensions[2] / 2
     set_keyframe_for_objects([arm, grabbed])
-    moves.append(action_builder("arm_to_locker_w_object", current_frame, format_arm, format_locker, format_grab))
+    moves.append(action_builder("arm_to_locker_w_object", current_frame, format_arm, format_locker, \
+        format_grab))
 
     #put it in(1 sec)
     #move in x
@@ -458,7 +442,8 @@ def position_item_to_locker_then_close(arm, grabbed, door, locker_num, format_ar
     placeholder = arm.location[0]
     arm.location[0] = grabbed.location[0] = correct_x
     set_keyframe_for_objects([arm, grabbed])
-    moves.append(action_builder("arm_position_object_in_locker", current_frame, format_arm, format_grab, format_locker))
+    moves.append(action_builder("arm_position_object_in_locker", current_frame, format_arm, \
+        format_grab, format_locker))
 
     #get out (1 sec)
     current_frame = advance_frame(current_frame)
@@ -480,6 +465,45 @@ def position_item_to_locker_then_close(arm, grabbed, door, locker_num, format_ar
 
     return current_frame, moves
 
+def put_item_in_visible_position(current_frame, arm, grabbed, format_arm, format_grab, moves):
+    #put the object on the ground, in a random visible position
+    current_frame = advance_frame(current_frame)
+    x, y = select_random_coordinates_on_visible_ground()
+    arm.location[0] = grabbed.location[0] = x
+    arm.location[1] = grabbed.location[1] = y
+    grabbed.location[2] = grabbed.dimensions[2] / 2
+    arm.location[2] = grabbed.location[2] + grabbed.dimensions[2] / 2
+    set_keyframe_for_objects([arm, grabbed])
+    moves.append(action_builder("arm_to_ground", current_frame, format_arm, format_grab))
+    return current_frame, moves
+
+def take_obj_from_locker(current_frame, moves, arm, grabbed, format_arm, format_grab, format_locker):
+    #move in y and z
+    current_frame = advance_frame(current_frame)
+    arm.location[1] = grabbed.location[1]
+    #apply correction for z axis to get on top of the object
+    arm.location[2] = grabbed.location[2] + (grabbed.dimensions[2] / 2)
+    set_keyframe_for_objects([arm])
+    moves.append(action_builder("arm_to_locker", current_frame, format_arm, format_locker))
+    moves.append(action_builder("arm_to_object", current_frame, format_arm, format_grab))
+
+    #get item (1 sec)
+    #move in x
+    current_frame = advance_frame(current_frame)
+    placeholder = arm.location[0]
+    arm.location[0] = grabbed.location[0]
+    set_keyframe_for_objects([arm, grabbed])
+    moves.append(action_builder("arm_into_locker", current_frame, format_arm, format_locker))
+    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab, duration=0))
+
+    #get out with item (1 sec)
+    current_frame = advance_frame(current_frame)
+    arm.location[0] = grabbed.location[0] = placeholder + grabbed.dimensions[0]
+    set_keyframe_for_objects([arm, grabbed])
+    moves.append(action_builder("arm_out_locker_w_object", current_frame, format_arm, format_locker, format_grab))
+
+    return current_frame, moves
+
 ########### ACTIVITIES ################
 
 def move_obj_to_other_locker(obj_type):
@@ -487,7 +511,8 @@ def move_obj_to_other_locker(obj_type):
     moves = [phrase_structure]
 
     #select a random obj in a locker
-    obj = select_random_object(choices=[obj_type], locations=[x for x in object_locations.keys() if x not in ["ground_in", "ground_out"]])
+    obj = select_random_object(choices=[obj_type], locations=[x for x in object_locations.keys() \
+        if x not in ["ground_in", "ground_out"]])
     print("Selected " + str(obj))
 
     #enable all collisions
@@ -529,35 +554,13 @@ def move_obj_to_other_locker(obj_type):
         format_locker_2, format_door_2, current_frame, moves)
 
     #get in front of the object of the first locker (1 sec)
-    #move in y and z
-    current_frame = advance_frame(current_frame)
-    arm.location[1] = obj.location[1]
-    #apply correction for z axis to get on top of the object
-    arm.location[2] = obj.location[2] + (obj.dimensions[2] / 2)
-    set_keyframe_for_objects([arm])
-    moves.append(action_builder("arm_to_locker", current_frame, format_arm, format_locker))
-    moves.append(action_builder("arm_to_object", current_frame, format_arm, format_obj))
-
-    #get item (1 sec)
-    #move in x
-    current_frame = advance_frame(current_frame)
-    placeholder = arm.location[0]
-    arm.location[0] = obj.location[0]
-    set_keyframe_for_objects([arm, obj])
-    moves.append(action_builder("arm_into_locker", current_frame, format_arm, format_locker))
-    moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_obj, duration=0))
-
-    #get out with item (1 sec)
-    current_frame = advance_frame(current_frame)
-    arm.location[0] = obj.location[0] = placeholder + obj.dimensions[0]
-    set_keyframe_for_objects([arm, obj])
-    moves.append(action_builder("arm_out_locker_w_object", current_frame, format_arm, format_locker, format_obj))
+    current_frame, moves = take_obj_from_locker(current_frame, moves, arm, obj, format_arm, format_obj, format_locker)
 
     #bring it to second locker, put it in and close door
     current_frame, moves = position_item_to_locker_then_close(arm, \
             obj, door_2, locker_num_2, format_arm, format_obj, format_locker_2, format_door_2, current_frame, moves)
 
-    #get to handle
+    #get to first handle
     current_frame = advance_frame(current_frame)
     arm.location = get_handle_location_for_door(door, locker_num)
     set_keyframe_for_objects([arm])
@@ -658,7 +661,8 @@ def put_object_in_scene(must_put_in_locker=False):
 
         #put object in locker and close door
         current_frame, moves = position_item_to_locker_then_close(arm, \
-            grabbed, door, locker_num, format_arm, format_grab, format_locker, format_door, current_frame, moves)
+            grabbed, door, locker_num, format_arm, format_grab, format_locker, format_door, \
+                current_frame, moves)
 
     #return to origin
     current_frame = advance_frame(current_frame)
@@ -795,8 +799,8 @@ def open_three_doors():
 
     #select three random different lockers
     locker_1, door_1 = get_random_locker_num_and_door()
-    locker_2, door_2 = get_random_locker_num_and_door(exceptions=[locker_1])
-    locker_3, door_3 = get_random_locker_num_and_door(exceptions=[locker_1, locker_2])
+    locker_2, door_2 = get_random_locker_num_and_door(exceptions=[int(locker_1)])
+    locker_3, door_3 = get_random_locker_num_and_door(exceptions=[int(locker_1), int(locker_2)])
 
     print("Chosen doors: {}, {} and {}".format(locker_1, locker_2, locker_3))
 
@@ -845,7 +849,7 @@ def open_three_doors():
 def swap_from_ground():
     moves = [phrase_structure]
 
-    #take an object from the locker
+    #take an object from a locker
     arm, grabbed, locker_num, door, format_arm, format_grab, format_locker, \
         format_door, current_frame, starting_location, moves = setup_taking_object(moves)
 
@@ -860,7 +864,7 @@ def swap_from_ground():
     moves.append(action_builder("arm_to_ground", current_frame, format_arm, format_grab))
 
     #choose a random locker and open it
-    locker_num_2, door_2 = get_random_locker_num_and_door(exceptions=[locker_num], nonempty=True)
+    locker_num_2, door_2 = get_random_locker_num_and_door(exceptions=[int(locker_num)])
     format_locker_2 = format_lockers(locker_num_2)
     format_door_2 = format_doors(locker_num_2)
 
@@ -876,8 +880,84 @@ def swap_from_ground():
     moves.append(action_builder("arm_to_object", current_frame, format_arm, format_grab))
 
     #put it in the locker
-    current_frame, moves = position_item_to_locker_then_close(arm, grabbed, door_2, locker_num_2, format_arm, format_grab, \
+    current_frame, moves = position_item_to_locker_then_close(arm, grabbed, door_2, \
+        locker_num_2, format_arm, format_grab, format_locker_2, format_door_2, current_frame, moves)
+
+    #return to origin
+    current_frame = advance_frame(current_frame)
+    return_to_origin(arm, starting_location)
+    moves.append(action_builder("arm_to_origin", current_frame, format_arm))
+
+    return moves
+
+def put_two_objects_on_ground():
+    moves = [phrase_structure]
+
+    #take an object from a locker
+    arm, grabbed, locker_num, door, format_arm, format_grab, format_locker, \
+        format_door, current_frame, starting_location, moves = setup_taking_object(moves)
+
+    #put the item on the ground
+    current_frame, moves = put_item_in_visible_position(current_frame, arm, grabbed, format_arm, format_grab, moves)
+
+    #give physics back to the object
+    grabbed.rigid_body.kinematic = False
+    grabbed.keyframe_insert(data_path='rigid_body.kinematic', frame=current_frame)
+
+    #choose another nonempty random locker and open it
+    locker_num_2, door_2 = get_random_locker_num_and_door(exceptions=[int(locker_num)], nonempty=True)
+    format_locker_2 = format_lockers(locker_num_2)
+    format_door_2 = format_doors(locker_num_2)
+
+    current_frame, moves = move_to_locker_and_open(arm, door_2, locker_num_2, format_arm, \
         format_locker_2, format_door_2, current_frame, moves)
+
+    #take a random object in that locker and put it on the ground
+    grabbed_2 = select_random_object(locations=['loc_' + str(locker_num_2)])
+    format_grab_2 = format_objs(grabbed_2)
+    #disable physics for second object
+    grabbed_2.rigid_body.kinematic = True
+
+    current_frame, moves = take_obj_from_locker(current_frame, moves, arm, grabbed_2, format_arm, \
+        format_grab_2, format_locker_2)
+
+    #put it on the ground at visibile position
+    current_frame, moves = put_item_in_visible_position(current_frame, arm, grabbed_2, format_arm, \
+        format_grab_2, moves)
+
+    #close one of the two doors (or none)
+    current_frame = advance_frame(current_frame)
+    choice = random()
+    door_to_close = 'none' if choice < 0.2 else 'first' if choice < 0.6 else 'second'
+    if door_to_close == 'first':
+        #move to and close first door
+        arm.location = get_handle_location_for_door(door, locker_num)
+        set_keyframe_for_objects([arm])
+        set_keyframe_for_objects([door], data_path='rotation_euler')
+        moves.append(action_builder("arm_to_locker", current_frame, format_arm, format_locker))
+        
+        current_frame = advance_frame(current_frame)
+        close_door(arm, door, locker_num)
+        set_keyframe_for_objects([door], data_path='rotation_euler')
+        moves.append(action_builder("arm_close_door", current_frame, format_arm, format_door))
+        
+    elif door_to_close == 'second':
+        #move to and close second door
+        arm.location = get_handle_location_for_door(door_2, locker_num_2)
+        set_keyframe_for_objects([door_2], data_path='rotation_euler')
+        set_keyframe_for_objects([arm])
+        moves.append(action_builder("arm_to_locker", current_frame, format_arm, format_locker_2))
+
+        current_frame = advance_frame(current_frame)
+        close_door(arm, door_2, locker_num_2)
+        set_keyframe_for_objects([door_2], data_path='rotation_euler')
+        moves.append(action_builder("arm_close_door", current_frame, format_arm, format_door_2))
+        
+    else:
+        #do nothing
+        pass
+
+    set_keyframe_for_objects([arm])
 
     #return to origin
     current_frame = advance_frame(current_frame)
@@ -897,6 +977,7 @@ activities = {
     'take_object_drop_and_replace' : take_object_drop_and_replace,
     'open_three_doors' : open_three_doors,
     'swap_from_ground' : swap_from_ground,
+    'put_two_objects_on_ground': put_two_objects_on_ground,
 }
 
 #get the path for saving the files
