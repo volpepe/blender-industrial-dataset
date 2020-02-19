@@ -33,12 +33,12 @@ objects = {
         'sphere_2' : bpy.data.objects["Sphere.002"],
         'sphere_3' : bpy.data.objects["Sphere.003"],
         'sphere_4' : bpy.data.objects["Sphere.004"],
-        'sphere_4' : bpy.data.objects["Sphere.005"],
+        'sphere_5' : bpy.data.objects["Sphere.005"],
     },
     'cones' : {
         'cone_0' : bpy.data.objects["Cone"],
         'cone_1' : bpy.data.objects["Cone.001"],
-        'cone_1' : bpy.data.objects["Cone.002"],
+        'cone_2' : bpy.data.objects["Cone.002"],
     },
     'cylinders' : {
         'cylinder_0' : bpy.data.objects["Cylinder"],
