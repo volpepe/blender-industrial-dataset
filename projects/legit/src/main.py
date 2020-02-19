@@ -261,13 +261,10 @@ def random_select_rotate_arm():
     arm.location = random_arm.location
     random_arm.location = starting_position
 
-    #randomly rotate within a certain threshold
-    random_arm.rotation_euler[0] = radians(random_scaled(70, 110))
-    random_arm.rotation_euler[1] = radians(random_scaled(57, 35))
-    if random_arm.rotation_euler[1] > 48:
-        random_arm.rotation_euler[2] = radians(random_scaled(-28, -90))
-    else:
-        random_arm.rotation_euler[2] = radians(random_scaled(-5, -40))
+    #randomly choose a small arm rotation
+    random_arm.rotation_euler[0] = radians(random_scaled(110, 70))
+    random_arm.rotation_euler[1] = radians(random_scaled(40, 20))
+    random_arm.rotation_euler[2] = radians(random_scaled(-35, -40))
 
     return random_arm
 
