@@ -427,7 +427,6 @@ def setup_taking_object(moves):
 
 def position_item_to_locker_then_close(arm, grabbed, door, locker_num, format_arm, format_grab, \
         format_locker, format_door, current_frame, moves):
-    ##take the item to second locker
     #first move in y and z to second locker
     current_frame = advance_frame(current_frame)
     #x and y are random within the locker boundaries
@@ -455,7 +454,7 @@ def position_item_to_locker_then_close(arm, grabbed, door, locker_num, format_ar
 
     #get out (1 sec)
     current_frame = advance_frame(current_frame)
-    arm.location[0] = placeholder + grabbed.dimensions[0]
+    arm.location[0] = placeholder + grabbed.dimensions[0] if placeholder < 3 else 3
     set_keyframe_for_objects([arm])
     moves.append(action_builder("arm_out_locker", current_frame, format_arm, format_locker))
 
@@ -750,6 +749,14 @@ def take_object_drop_and_replace():
     arm, grabbed, locker_num, door, format_arm, format_grab, format_locker, \
         format_door, current_frame, starting_location, moves = setup_taking_object(moves)
 
+    #select another random object from the ground to put in the open locker
+    grabbed_2 = select_random_object(choices=['cubes','spheres','cones'], locations=["ground_in", "ground_out"])
+    print("Selected " + str(grabbed))
+    #set a keyframe for its physics
+    grabbed_2.rigid_body.kinematic = False
+    grabbed_2.keyframe_insert(data_path='rigid_body.kinematic', frame=current_frame)
+    format_grab_2 = format_objs(grabbed_2)
+
     #position arm and object in a random location in the scene
     current_frame = advance_frame(current_frame)
     x, y = select_random_coordinates_on_visible_ground()
@@ -759,22 +766,19 @@ def take_object_drop_and_replace():
     moves.append(action_builder("arm_to_unidentified_w_object", current_frame, format_arm, format_grab))
 
     #drop object on the ground by enabling its physics again
-    current_frame = advance_frame(current_frame)
     grabbed.rigid_body.enabled = True
     grabbed.rigid_body.kinematic = False
     grabbed.keyframe_insert(data_path='rigid_body.enabled', frame=current_frame)
     grabbed.keyframe_insert(data_path='rigid_body.kinematic', frame=current_frame)
-    set_keyframe_for_objects([arm])
     moves.append(action_builder("arm_drop_object", current_frame, format_arm, format_grab))
 
-    #get another random object from the ground and put it in the open locker
-    grabbed_2 = select_random_object(choices=['cubes','spheres','cones'], locations=["ground_in", "ground_out"])
-    print("Selected " + str(grabbed))
+    #rest for a random amount of time while object falls to the ground
+    current_frame = advance_frame(current_frame - random_scaled(9, 0))
+    set_keyframe_for_objects([arm])
 
-    #disable its physics so that it can be controlled by the animation system
+    #make other object kinematic
     grabbed_2.rigid_body.kinematic = True
-
-    format_grab_2 = format_objs(grabbed_2)
+    grabbed_2.keyframe_insert(data_path='rigid_body.kinematic', frame=current_frame)
 
     #move to selected object
     current_frame = advance_frame(current_frame)
@@ -786,17 +790,13 @@ def take_object_drop_and_replace():
     moves.append(action_builder("arm_to_object", current_frame, format_arm, format_grab))
     moves.append(action_builder("arm_grab_object", current_frame, format_arm, format_grab, duration=0))
 
-    #rest for half a second 
-    current_frame = advance_frame(current_frame - 6)
+    #rest for a while
+    current_frame = advance_frame(current_frame - 3)
     set_keyframe_for_objects([arm, grabbed_2])
 
     #put object in locker and close the door
     current_frame, moves = position_item_to_locker_then_close(arm, \
             grabbed_2, door, locker_num, format_arm, format_grab_2, format_locker, format_door, current_frame, moves)
-
-    #rest for half a second 
-    current_frame = advance_frame(current_frame - 6)
-    set_keyframe_for_objects([arm, grabbed_2])
 
     #return to origin
     current_frame = advance_frame(current_frame)
