@@ -249,7 +249,7 @@ def random_rotate_camera(camera):
 
 def select_random_coordinates_on_visible_ground():
     x_min = 2.2875
-    x_max = 4.5
+    x_max = 3.3
     y_min = -3.6
     y_max = 5.00
     return random_scaled(x_max, x_min), random_scaled(y_max, y_min)
