@@ -724,6 +724,12 @@ def take_object_out_of_scene():
     #randomly choose where to put the object
     x, y = select_random_coordinates_on_visible_ground()
     x += 7 #move to invisible ground
+    #get some height
+    current_frame = advance_frame(current_frame)
+    arm.location[2] += 1
+    grabbed.location[2] += 1
+    set_keyframe_for_objects([arm, grabbed])
+    #move away
     current_frame = advance_frame(current_frame)
     arm.location[0] = grabbed.location[0] = x
     arm.location[1] = grabbed.location[1] = y
