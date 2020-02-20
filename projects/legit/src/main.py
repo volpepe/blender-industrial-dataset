@@ -58,6 +58,8 @@ objects = {
     }
 }
 
+physical_locker = bpy.data.objects["Locker"]
+
 object_locations = {
     'ground_in' : [
         bpy.data.objects["Cube.002"],
@@ -170,7 +172,8 @@ actions = {
     "arm_to_ground" : lambda arm, obj, null, start, end: [arm, "put", obj, "on", "the ground", "", "", start, end],
     "arm_exit_scene_w_object" : lambda arm, obj, null, start, end: [arm, "moved", "itself", "out of", "scene", "holding", obj, start, end],
     "arm_to_unidentified_w_object" : lambda arm, obj, null, start, end : [arm, "moved", "itself", "to", "unidentified position", "holding", obj, start, end],
-    "arm_drop_object" : lambda arm, dropped, null, start, end : [arm, "dropped", dropped, "on", "the ground", "", "", start, end]
+    "arm_drop_object" : lambda arm, dropped, null, start, end : [arm, "dropped", dropped, "on", "the ground", "", "", start, end],
+    "arm_on_top_w_object" : lambda arm, obj, null, start, end : [arm, "moved", "itself", "on", "top of the locker", "holding", obj, start, end],
 }
 
 def action_builder(action, end, var_1=None, var_2=None, var_3=None, duration=1):
@@ -267,6 +270,13 @@ def random_select_rotate_arm():
     random_arm.rotation_euler[2] = radians(random_scaled(-35, -40))
 
     return random_arm
+
+def get_random_location_on_locker():
+    max_x = physical_locker.location[0] + physical_locker.dimensions[0] / 2 - 1
+    min_x = physical_locker.location[0] - physical_locker.dimensions[0] / 2 + 1
+    max_y = physical_locker.location[1] + physical_locker.dimensions[1] / 2 - 0.5
+    min_y = physical_locker.location[1] - physical_locker.dimensions[1] / 2 + 0.5
+    return random_scaled(max_x, min_x), random_scaled(max_y, min_y)
 
 ###################################################################
 
@@ -408,7 +418,7 @@ def setup_taking_object(moves):
     current_frame, moves = move_to_locker_and_open(arm, door, locker_num, format_arm, \
         format_locker, format_door, current_frame, moves)
 
-    #get in front of the object (1 sec)
+    #get in front of the object and take it
     current_frame, moves = take_obj_from_locker(current_frame, moves, arm, grabbed, \
         format_arm, format_grab, format_locker)
 
@@ -964,6 +974,53 @@ def put_two_objects_on_ground():
 
     return moves
 
+def put_on_top():
+    moves = [phrase_structure]
+
+    #take an object from a locker
+    arm, grabbed, locker_num, door, format_arm, format_grab, format_locker, \
+        format_door, current_frame, starting_location, moves = setup_taking_object(moves)
+
+    #put it on top of the locker
+    #move in z first
+    current_frame = advance_frame(current_frame)
+    arm.location[2] = physical_locker.location[2] + physical_locker.dimensions[2] / 2 + grabbed.dimensions[2]
+    grabbed.location[2] = arm.location[2] - grabbed.dimensions[2] / 2
+    set_keyframe_for_objects([arm, grabbed])
+    moves.append(action_builder("arm_to_unidentified_w_object", current_frame, format_arm, format_grab))
+
+    #move in x and y at random location on locker
+    current_frame = advance_frame(current_frame)
+    placeholder = Vector(arm.location)
+    x, y = get_random_location_on_locker()
+    arm.location[0] = grabbed.location[0] = x
+    arm.location[1] = grabbed.location[1] = y
+    set_keyframe_for_objects([arm, grabbed])
+    moves.append(action_builder("arm_on_top_w_object", current_frame, format_arm, format_grab))
+
+    #get down and close door
+    current_frame = advance_frame(current_frame)
+    arm.location = placeholder
+    set_keyframe_for_objects([arm])
+
+    current_frame = advance_frame(current_frame)
+    arm.location = get_handle_location_for_door(door, locker_num)
+    set_keyframe_for_objects([door], data_path='rotation_euler')
+    set_keyframe_for_objects([arm])
+    moves.append(action_builder("arm_to_locker", current_frame, format_arm, format_locker))
+
+    current_frame = advance_frame(current_frame)
+    close_door(arm, door, locker_num)
+    set_keyframe_for_objects([door], data_path='rotation_euler')
+    moves.append(action_builder("arm_close_door", current_frame, format_arm, format_door))
+
+    #return to origin
+    current_frame = advance_frame(current_frame)
+    return_to_origin(arm, starting_location)
+    moves.append(action_builder("arm_to_origin", current_frame, format_arm))
+
+    return moves
+
 ###################################################################
 
 activities = {
@@ -976,6 +1033,7 @@ activities = {
     'open_three_doors' : open_three_doors,
     'swap_from_ground' : swap_from_ground,
     'put_two_objects_on_ground': put_two_objects_on_ground,
+    'put_on_top': put_on_top
 }
 
 #get the path for saving the files
@@ -1007,10 +1065,12 @@ else:
     random_activity = choose_activity()
 moves = activities[random_activity]()
 
-folder = ''
 #set filepath
+activity_folder = folder = os.path.join(out_path, random_activity)
+if not os.path.exists(activity_folder):
+    os.mkdir(activity_folder)
 while True:
-    folder = os.path.join(out_path, random_activity, datetime.now().strftime("%d%m%Y_%H%M%S"))
+    folder = os.path.join(activity_folder, datetime.now().strftime("%d%m%Y_%H%M%S"))
     #if folder doesn't exist, create it and start rendering, else retry in a second to avoid problems
     if not os.path.exists(folder):
         os.mkdir(folder)
