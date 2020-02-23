@@ -1072,18 +1072,20 @@ else:
 moves = activities[random_activity]()
 
 #set filepath
+timestamp = ''
 activity_folder = folder = os.path.join(out_path, random_activity)
 if not os.path.exists(activity_folder):
     os.mkdir(activity_folder)
 while True:
-    folder = os.path.join(activity_folder, datetime.now().strftime("%d%m%Y_%H%M%S"))
+    timestamp = datetime.now().strftime("%d%m%Y_%H%M%S")
+    folder = os.path.join(activity_folder, timestamp)
     #if folder doesn't exist, create it and start rendering, else retry in a second to avoid problems
     if not os.path.exists(folder):
         os.mkdir(folder)
         break
     else:
         time.sleep(1)
-bpy.context.scene.render.filepath = os.path.join(folder, "frame")
+bpy.context.scene.render.filepath = os.path.join(folder, timestamp)
 
 #bake physics
 for obj in get_all_objects(exceptions=["lights", "cameras"]):
