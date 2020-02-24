@@ -21,6 +21,10 @@ with open(args.class_file, 'r') as classInd:
     for cnt, line in enumerate(classInd):
         classes[line.split()[1]] = line.split()[0]
 
+if args.video_num < len(classes):
+    print("You MUST render at least ONE video PER CLASS")
+    sys.exit()
+
 current_dir = os.getcwd()
 os.chdir(args.blender_dir)
 
