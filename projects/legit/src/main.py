@@ -1085,7 +1085,7 @@ while True:
         break
     else:
         time.sleep(1)
-bpy.context.scene.render.filepath = os.path.join(folder, timestamp)
+bpy.context.scene.render.filepath = os.path.join(folder, 'img_0')
 
 #bake physics
 for obj in get_all_objects(exceptions=["lights", "cameras"]):
