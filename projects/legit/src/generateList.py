@@ -3,7 +3,6 @@ import sys
 import argparse
 import glob
 import random
-import csv
 
 parser = argparse.ArgumentParser(
     description = 'Create train and test lists for custom dataset',
