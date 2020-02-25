@@ -7,7 +7,7 @@ import random
 parser = argparse.ArgumentParser(
     description = 'Create train and test lists for custom dataset',
 )
-parser.add_argument('--folder', '-f', type=str, default='../../data/custom/rawframes')
+parser.add_argument('--folder', '--f', type=str, default='../../data/custom/rawframes')
 args = parser.parse_args(sys.argv[1:])
 
 #open classInd.txt to take classes
