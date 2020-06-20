@@ -1,0 +1,10 @@
+0 move_sphere_to_other_locker 
+1 move_cube_to_other_locker 
+2 get_new_object 
+3 put_new_object_in_locker 
+4 take_object_out_of_scene 
+5 take_object_drop_and_replace 
+6 open_three_doors 
+7 swap_from_ground 
+8 put_two_objects_on_ground 
+9 put_on_top 
